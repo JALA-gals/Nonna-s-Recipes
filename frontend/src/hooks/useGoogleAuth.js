@@ -1,57 +1,113 @@
-import { useEffect, useState } from "react";
+// src/hooks/useGoogleAuth.js
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Platform } from "react-native";
 import * as Google from "expo-auth-session/providers/google";
-import * as AuthSession from "expo-auth-session";
+import * as WebBrowser from "expo-web-browser";
 import { auth } from "../lib/firebase";
-import { signInWithCredential, GoogleAuthProvider } from "firebase/auth";
+import {
+  GoogleAuthProvider,
+  signInWithCredential,
+  signInWithPopup,
+} from "firebase/auth";
+
+WebBrowser.maybeCompleteAuthSession();
 
 export function useGoogleAuth() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
+  const inFlightRef = useRef(false);
 
-  // web login => NO proxy. Expo Go => proxy.
-  const useProxy = Platform.OS !== "web";
+  // Strong web detection
+  const isWeb = typeof window !== "undefined" && Platform.OS === "web";
 
-  const redirectUri = AuthSession.makeRedirectUri({ useProxy });
+  // Provider once (web)
+  const webProvider = useMemo(() => {
+    const p = new GoogleAuthProvider();
+    p.setCustomParameters({ prompt: "select_account" });
+    return p;
+  }, []);
 
-  console.log("PLATFORM:", Platform.OS);
-  console.log("REDIRECT URI:", redirectUri);
-
+  // Native request (Expo Go)
   const [request, response, promptAsync] = Google.useAuthRequest({
     expoClientId: process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID,
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
     iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
     androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID,
-    redirectUri,
-    extraParams: { prompt: "select_account" },
+    scopes: ["openid", "profile", "email"],
   });
 
+  // Native completion: Google -> Firebase
   useEffect(() => {
-    if (response?.type !== "success") return;
+    if (isWeb) return;
+    if (!response) return;
+    if (response.type !== "success") return;
 
     (async () => {
       try {
-        setIsAuthenticating(true);
         setErrorMessage(null);
+        setIsAuthenticating(true);
 
-        const { id_token } = response.params ?? {};
-        if (!id_token) throw new Error("No id_token returned from Google");
+        const idToken = response.authentication?.idToken;
+        const accessToken = response.authentication?.accessToken;
 
-        const credential = GoogleAuthProvider.credential(id_token);
-        await signInWithCredential(auth, credential);
+        if (!idToken) throw new Error("No idToken returned from Google.");
+
+        const credential = GoogleAuthProvider.credential(idToken, accessToken);
+        const cred = await signInWithCredential(auth, credential);
+        console.log("NATIVE Firebase UID:", cred.user.uid);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        console.error("Google sign-in error:", msg);
+        console.error("NATIVE Google sign-in error:", msg);
         setErrorMessage(msg);
       } finally {
         setIsAuthenticating(false);
+        inFlightRef.current = false;
       }
     })();
-  }, [response]);
+  }, [response, isWeb]);
 
-  const signInWithGoogle = () => {
-    setErrorMessage(null);
-    return promptAsync({ useProxy });
+  const signInWithGoogleWeb = async () => {
+    try {
+      setErrorMessage(null);
+      setIsAuthenticating(true);
+
+      const cred = await signInWithPopup(auth, webProvider);
+      console.log("WEB Firebase UID:", cred.user.uid);
+      console.log("WEB auth.currentUser:", auth.currentUser?.uid);
+
+      return cred;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("WEB Google sign-in error:", msg);
+      setErrorMessage(msg);
+      throw err;
+    } finally {
+      setIsAuthenticating(false);
+      inFlightRef.current = false;
+    }
+  };
+
+  const signInWithGoogle = async () => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+
+    if (isWeb) {
+      return signInWithGoogleWeb();
+    }
+
+    try {
+      setErrorMessage(null);
+      setIsAuthenticating(true);
+
+      if (!request) throw new Error("Google auth request not ready yet.");
+      return await promptAsync({ useProxy: true });
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("promptAsync error:", msg);
+      setErrorMessage(msg);
+      setIsAuthenticating(false);
+      inFlightRef.current = false;
+    }
   };
 
   return { signInWithGoogle, isAuthenticating, errorMessage };

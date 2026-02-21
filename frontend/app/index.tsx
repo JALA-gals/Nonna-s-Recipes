@@ -1,68 +1,67 @@
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { Alert, Button, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  Alert,
+  Button,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { onAuthStateChanged, signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../src/lib/firebase";
 import { Colors } from "@/constants/theme";
-import { useGoogleAuth } from "../src/hooks/useGoogleAuth"; // adjust path if needed
+import { useGoogleAuth } from "../src/hooks/useGoogleAuth";
 
 const light = Colors.light;
 
 export default function LoginScreen() {
   const router = useRouter();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const { signInWithGoogle, isAuthenticating, errorMessage } = useGoogleAuth();
 
-  // Route to tabs whenever user becomes signed in (email OR Google)
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
-      if (user) router.replace("/(tabs)");
+      console.log("AUTH STATE:", user ? user.uid : "signed out");
+
+      if (user) {
+        router.replace("/(tabs)");
+      } else {
+        setCheckingAuth(false);
+      }
     });
+
     return unsub;
   }, [router]);
 
-  // Show Google errors
   useEffect(() => {
     if (errorMessage) Alert.alert("Google sign-in failed", errorMessage);
   }, [errorMessage]);
 
   const handleLogin = async () => {
     try {
-      const cred = await signInWithEmailAndPassword(auth, email, password);
-
-      // 🔥 FIX #1 — Proper email verification check
-      if (!cred.user.emailVerified) {
-        Alert.alert(
-          "Email not verified",
-          "Please check your inbox and verify your email before logging in."
-        );
-        return; // stop here
-      }
-
-      console.log("Firebase user:", cred.user.uid);
-
-      // 🔥 FIX #2 — Only navigate after verification
-      router.replace("/(tabs)");
-
-    } catch (error: any) {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
       console.log(error);
-      Alert.alert("Login failed", error.message);
+      Alert.alert("Login failed");
     }
   };
 
   const handleGoogleLogin = async () => {
     try {
-      console.log("Google button pressed");
       await signInWithGoogle();
-      // routing happens via onAuthStateChanged
     } catch (e) {
       console.log("Google prompt error:", e);
-      Alert.alert("Google sign-in cancelled", "Try again.");
     }
   };
+
+  // ✅ prevents flicker / weird “back to login” feel
+  if (checkingAuth) return null;
 
   return (
     <View style={styles.container}>
