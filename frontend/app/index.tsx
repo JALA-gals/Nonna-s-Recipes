@@ -5,36 +5,40 @@ import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../src/lib/firebase";
 import { Colors } from "@/constants/theme";
 
-
 const light = Colors.light;
-
 
 export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-
   const handleLogin = async () => {
     try {
       const cred = await signInWithEmailAndPassword(auth, email, password);
+
+      // 🔥 FIX #1 — Proper email verification check
       if (!cred.user.emailVerified) {
-        Alert.alert("Email not verified", "Please verify your email before logging in.");
-        return;
+        Alert.alert(
+          "Email not verified",
+          "Please check your inbox and verify your email before logging in."
+        );
+        return; // stop here
       }
+
       console.log("Firebase user:", cred.user.uid);
+
+      // 🔥 FIX #2 — Only navigate after verification
       router.replace("/(tabs)");
-    } catch (error) {
+
+    } catch (error: any) {
       console.log(error);
-      Alert.alert("Login failed");
+      Alert.alert("Login failed", error.message);
     }
   };
-
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Login</Text>
-
 
       <TextInput
         placeholder="Email"
@@ -46,7 +50,6 @@ export default function LoginScreen() {
         keyboardType="email-address"
       />
 
-
       <TextInput
         placeholder="Password"
         placeholderTextColor={light.icon}
@@ -56,21 +59,14 @@ export default function LoginScreen() {
         secureTextEntry
       />
 
-
       <Button title="Login" onPress={handleLogin} />
 
-
-      <Pressable
-        style = {styles.link}
-        onPress={() => router.push("/register")}
-        >
-          
-       <Text style = {styles.linkText}>Don't have an account? Sign up</Text>
+      <Pressable style={styles.link} onPress={() => router.push("/register")}>
+        <Text style={styles.linkText}>Don't have an account? Sign up</Text>
       </Pressable>
     </View>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
@@ -102,9 +98,5 @@ const styles = StyleSheet.create({
   linkText: {
     color: light.tint,
     fontSize: 14,
-
-
   },
-
-
 });

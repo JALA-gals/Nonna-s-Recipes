@@ -14,9 +14,7 @@ export default function RegisterScreen() {
   const handleRegister = async () => {
     try {
       const cred = await signUpWithEmail(email, password);
-      Alert.alert("Verify your email", "We've sent a verification link to your inbox. Please verify before logging in.");
-
-      // After successful signup, send them to login or tabs
+    
       router.replace("/"); // go back to login
     } catch (error) {
       console.log(error);
