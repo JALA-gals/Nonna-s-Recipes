@@ -1,19 +1,33 @@
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Alert, Button, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { onAuthStateChanged, signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../src/lib/firebase";
 import { Colors } from "@/constants/theme";
-
+import { useGoogleAuth } from "../src/hooks/useGoogleAuth"; // adjust path if needed
 
 const light = Colors.light;
 
-
 export default function LoginScreen() {
   const router = useRouter();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const { signInWithGoogle, isAuthenticating, errorMessage } = useGoogleAuth();
+
+  // Route to tabs whenever user becomes signed in (email OR Google)
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) router.replace("/(tabs)");
+    });
+    return unsub;
+  }, [router]);
+
+  // Show Google errors
+  useEffect(() => {
+    if (errorMessage) Alert.alert("Google sign-in failed", errorMessage);
+  }, [errorMessage]);
 
   const handleLogin = async () => {
     try {
@@ -26,11 +40,20 @@ export default function LoginScreen() {
     }
   };
 
+  const handleGoogleLogin = async () => {
+    try {
+      console.log("Google button pressed");
+      await signInWithGoogle();
+      // routing happens via onAuthStateChanged
+    } catch (e) {
+      console.log("Google prompt error:", e);
+      Alert.alert("Google sign-in cancelled", "Try again.");
+    }
+  };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Login</Text>
-
 
       <TextInput
         placeholder="Email"
@@ -42,7 +65,6 @@ export default function LoginScreen() {
         keyboardType="email-address"
       />
 
-
       <TextInput
         placeholder="Password"
         placeholderTextColor={light.icon}
@@ -52,21 +74,22 @@ export default function LoginScreen() {
         secureTextEntry
       />
 
-
       <Button title="Login" onPress={handleLogin} />
 
+      <View style={{ height: 8 }} />
 
-      <Pressable
-        style = {styles.link}
-        onPress={() => router.push("/register")}
-        >
-          
-       <Text style = {styles.linkText}>Don't have an account? Sign up</Text>
+      <Button
+        title={isAuthenticating ? "Signing in..." : "Continue with Google"}
+        onPress={handleGoogleLogin}
+        disabled={isAuthenticating}
+      />
+
+      <Pressable style={styles.link} onPress={() => router.push("/register")}>
+        <Text style={styles.linkText}>Don't have an account? Sign up</Text>
       </Pressable>
     </View>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
@@ -98,9 +121,5 @@ const styles = StyleSheet.create({
   linkText: {
     color: light.tint,
     fontSize: 14,
-
-
   },
-
-
 });
