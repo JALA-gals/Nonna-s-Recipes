@@ -9,12 +9,14 @@ import {
   type Recording
 } from '../../services/audio';
 import { transcribeAudio } from '../../services/whisper';
+import { structureRecipe } from '../../services/gemini';
 
 export default function RecordScreen() {
   const [isRecording, setIsRecording] = useState(false);
   const [recordings, setRecordings] = useState<Recording[]>([]);
   const [status, setStatus] = useState('');
   const [transcripts, setTranscripts] = useState<Record<string, string>>({});
+  const [recipes, setRecipes] = useState<Record<string, any>>({});
   const [playingUri, setPlayingUri] = useState<string | null>(null);
   const [submittingUri, setSubmittingUri] = useState<string | null>(null);
 
@@ -60,12 +62,18 @@ export default function RecordScreen() {
     try {
       setSubmittingUri(uri);
       setStatus('Transcribing...');
-      const result = await transcribeAudio(uri);
-      setTranscripts(prev => ({ ...prev, [uri]: result }));
+      const transcript = await transcribeAudio(uri);
+
+      setStatus('Structuring recipe...');
+      const recipe = await structureRecipe(transcript);
+
+      setTranscripts(prev => ({ ...prev, [uri]: transcript }));
+      setRecipes(prev => ({ ...prev, [uri]: recipe }));
       setStatus('Done!');
-      console.log('Transcript:', result);
+      console.log('Transcript:', transcript);
+      console.log('Recipe:', JSON.stringify(recipe, null, 2));
     } catch (e) {
-      setStatus('Transcription failed');
+      setStatus('Something went wrong');
       console.log(e);
     } finally {
       setSubmittingUri(null);
@@ -75,6 +83,11 @@ export default function RecordScreen() {
   async function handleDelete(uri: string) {
     await deleteRecording(uri);
     setTranscripts(prev => {
+      const updated = { ...prev };
+      delete updated[uri];
+      return updated;
+    });
+    setRecipes(prev => {
       const updated = { ...prev };
       delete updated[uri];
       return updated;
@@ -140,14 +153,53 @@ export default function RecordScreen() {
               disabled={submittingUri === item.uri}
             >
               <Text style={styles.submitBtnText}>
-                {submittingUri === item.uri ? 'Transcribing...' : '✨ Submit Recipe'}
+                {submittingUri === item.uri ? 'Processing...' : '✨ Submit Recipe'}
               </Text>
             </TouchableOpacity>
 
+            {/* Transcript */}
             {transcripts[item.uri] ? (
               <View style={styles.transcriptBox}>
                 <Text style={styles.transcriptLabel}>Transcript</Text>
                 <Text style={styles.transcriptText}>{transcripts[item.uri]}</Text>
+              </View>
+            ) : null}
+
+            {/* Structured Recipe */}
+            {recipes[item.uri] ? (
+              <View style={styles.recipeBox}>
+                <Text style={styles.recipeTitle}>{recipes[item.uri].title}</Text>
+
+                {recipes[item.uri].memory ? (
+                  <Text style={styles.recipeMemory}>💭 {recipes[item.uri].memory}</Text>
+                ) : null}
+
+                {recipes[item.uri].cultural_background ? (
+                  <Text style={styles.recipeCulture}>🌍 {recipes[item.uri].cultural_background}</Text>
+                ) : null}
+
+                <Text style={styles.recipeSection}>Ingredients</Text>
+                {recipes[item.uri].ingredients?.map((ing: any, i: number) => (
+                  <View key={i} style={styles.ingredientRow}>
+                    <Text style={styles.ingredientText}>• {ing.amount} {ing.item}</Text>
+                    {ing.note ? <Text style={styles.ingredientNote}>{ing.note}</Text> : null}
+                  </View>
+                ))}
+
+                <Text style={styles.recipeSection}>Steps</Text>
+                {recipes[item.uri].steps?.map((s: any, i: number) => (
+                  <View key={i} style={styles.stepRow}>
+                    <Text style={styles.stepNumber}>{s.step}</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.stepText}>{s.instruction}</Text>
+                      {s.tip ? <Text style={styles.stepTip}>💬 "{s.tip}"</Text> : null}
+                    </View>
+                  </View>
+                ))}
+
+                {recipes[item.uri].flexibility_notes ? (
+                  <Text style={styles.flexNote}>📝 {recipes[item.uri].flexibility_notes}</Text>
+                ) : null}
               </View>
             ) : null}
           </View>
@@ -227,6 +279,36 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   transcriptLabel: { fontSize: 11, color: '#888', marginBottom: 4 },
-  transcriptText: { fontSize: 14, color: '#333', lineHeight: 20 },
+  transcriptText: { fontSize: 14, color: '#333', fontStyle: 'italic', lineHeight: 20 },
+  recipeBox: {
+    marginTop: 16,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#eee',
+  },
+  recipeTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 6 },
+  recipeMemory: { fontSize: 13, color: '#888', fontStyle: 'italic', marginBottom: 4 },
+  recipeCulture: { fontSize: 13, color: '#888', marginBottom: 12 },
+  recipeSection: { fontSize: 16, fontWeight: '700', marginTop: 12, marginBottom: 6 },
+  ingredientRow: { marginBottom: 4 },
+  ingredientText: { fontSize: 14, color: '#333' },
+  ingredientNote: { fontSize: 12, color: '#888', fontStyle: 'italic' },
+  stepRow: { flexDirection: 'row', gap: 10, marginBottom: 10 },
+  stepNumber: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#1a73e8',
+    color: 'white',
+    textAlign: 'center',
+    fontSize: 13,
+    fontWeight: 'bold',
+    lineHeight: 24,
+  },
+  stepText: { fontSize: 14, color: '#333', flex: 1 },
+  stepTip: { fontSize: 12, color: '#888', fontStyle: 'italic', marginTop: 2 },
+  flexNote: { fontSize: 13, color: '#666', marginTop: 12, fontStyle: 'italic' },
   empty: { color: '#aaa', textAlign: 'center', marginTop: 24 }
 });
