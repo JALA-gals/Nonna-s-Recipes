@@ -38,7 +38,7 @@ export default function LoginScreen() {
     const unsub = onAuthStateChanged(auth, (user) => {
       console.log("AUTH STATE:", user ? user.uid : "signed out");
 
-      if (user) {
+      if (user&& user.emailVerified) {
         router.push("/(tabs)")
       } else {
         setCheckingAuth(false);

@@ -1,5 +1,5 @@
 import React from "react";
-import { Modal, View, Text, Button, StyleSheet, Pressable } from "react-native";
+import { TouchableOpacity, Image, KeyboardAvoidingView, ScrollView, Platform, Dimensions, Modal, View, Text, Button, StyleSheet, Pressable } from "react-native";
 
 interface PopupProps {
     visible: boolean;
@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
     popup: {
         width: 300,
     padding: 20,
-    backgroundColor: "white",
+    backgroundColor: 'rgba(255,255,255,1)',
     borderRadius: 12,
     alignItems: "center",
   },
@@ -51,20 +51,47 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "700",
     marginBottom: 10,
+    color:'#7b3306',
+    shadowColor: '#7b3306',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
   },
   message: {
     fontSize: 16,
+     color:'#7b3306',
     textAlign: "center",
     marginBottom: 20,
   },
   button: {
-    backgroundColor: "#007AFF",
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
+    width:"80%",
+     backgroundColor: '#ffcc7f',
+    borderRadius: 50,
+    paddingVertical: 20,
+    alignItems: 'center',
+    
+    marginTop: 8,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
   },
   resendButton:{
-    backgroundColor:"#34C759",
+    width:"80%",  
+    backgroundColor: '#ffcc7f',
+    borderRadius: 50,
+    paddingVertical: 20,
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
   },
   buttonText: {
     color: "white",
