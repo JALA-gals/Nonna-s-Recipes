@@ -1,104 +1,23 @@
-import { useRouter } from "expo-router";
-import React, { useState } from "react";
-import { Alert, Button, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../src/lib/firebase";
-import { Colors } from "@/constants/theme";
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import "react-native-reanimated";
 
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
-const light = Colors.light;
+export const unstable_settings = {
+  initialRouteName: "index",
+};
 
-
-export default function LoginScreen() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-
-  const handleLogin = async () => {
-    try {
-      const cred = await signInWithEmailAndPassword(auth, email, password);
-      console.log("Firebase user:", cred.user.uid);
-      router.replace("/(tabs)");
-    } catch (error) {
-      console.log(error);
-      Alert.alert("Login failed");
-    }
-  };
-
+export default function RootLayout() {
+  const colorScheme = useColorScheme();
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
-
-
-      <TextInput
-        placeholder="Email"
-        placeholderTextColor={light.icon}
-        value={email}
-        onChangeText={setEmail}
-        style={styles.input}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
-
-
-      <TextInput
-        placeholder="Password"
-        placeholderTextColor={light.icon}
-        value={password}
-        onChangeText={setPassword}
-        style={styles.input}
-        secureTextEntry
-      />
-
-
-      <Button title="Login" onPress={handleLogin} />
-
-
-      <Pressable
-        style = {styles.link}
-      >
-       <Text style = {styles.linkText}>Don't have an account? Sign up</Text>
-      </Pressable>
-    </View>
+    <>
+      <Stack>
+        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="(new)" options={{ headerShown: false }} />
+      </Stack>
+      <StatusBar style="auto" />
+    </>
   );
 }
-
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    padding: 24,
-    gap: 16,
-    backgroundColor: light.background,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: light.text,
-    marginBottom: 8,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 12,
-    backgroundColor: light.background,
-    color: light.text,
-    fontSize: 16,
-  },
-  link: {
-    marginTop: 20,
-    alignItems: "center",
-  },
-  linkText: {
-    color: light.tint,
-    fontSize: 14,
-
-
-  },
-
-
-});
