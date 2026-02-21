@@ -6,9 +6,10 @@ interface PopupProps {
     onClose: () => void;
     title: string;
     message: string;
+    onResend?: () => void;
 }
 
-export default function Popup({ visible, onClose, title, message }: PopupProps) {
+export default function Popup({ visible, onClose, title, message, onResend }: PopupProps) {
     return (
         <Modal visible={visible}
             transparent
@@ -18,9 +19,15 @@ export default function Popup({ visible, onClose, title, message }: PopupProps) 
                 <View style={styles.popup}>
                     <Text style={styles.title}>{title}</Text>
                     <Text style={styles.message}>{message}</Text>
+                    {/*Ok button*/}
                     <Pressable style={styles.button} onPress={onClose}> 
                         <Text style={styles.buttonText}>Ok</Text> 
                     </Pressable>
+                    {/*Resend button*/}
+                    {onResend && (
+                        <Pressable style={[styles.button, styles.resendButton]} onPress={onResend}>
+                        <Text style={styles.buttonText}>Resend Email</Text>
+                    </Pressable>)}
                 </View>
             </View>
         </Modal>
@@ -55,6 +62,9 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 8,
+  },
+  resendButton:{
+    backgroundColor:"#34C759",
   },
   buttonText: {
     color: "white",

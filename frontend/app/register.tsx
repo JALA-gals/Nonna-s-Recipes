@@ -4,8 +4,25 @@ import { useRouter } from "expo-router";
 import { signUpWithEmail } from "../src/lib/auth"; 
 import { Colors } from "@/constants/theme";
 import Popup from "@/components/Popup";
-const light = Colors.light;
+import {sendEmailVerification} from "firebase/auth";
+import { auth } from "../src/lib/firebase";
 
+const light = Colors.light;
+const handleResend = async () => {
+  try {
+    const user = auth.currentUser;
+
+    if (!user) {
+      Alert.alert("Error", "No user is currently logged in.");
+      return;
+    }
+
+    await sendEmailVerification(user);
+    Alert.alert("Verification email sent again!");
+  } catch (error: any) {
+    Alert.alert("Error", error.message);
+  }
+};
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -58,6 +75,7 @@ export default function RegisterScreen() {
           setPopupVisible(false);
           router.replace("/");
         }}
+        onResend={handleResend}
       />
     </View>
   );
