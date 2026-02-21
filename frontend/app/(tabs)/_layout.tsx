@@ -5,14 +5,14 @@ export default function TabLayout() {
   return (
     <Tabs screenOptions={{ headerShown: true }}>
       <Tabs.Screen
-        name="index"
+        name="recording"
         options={{
-          title: "Home",
+          title: "Recording",
         }}
       />
 
       <Tabs.Screen
-        name="add"
+        name="index"
         options={{
           title: "Add Recipe",
         }}

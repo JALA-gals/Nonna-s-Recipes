@@ -8,19 +8,28 @@ import {
   Text,
   TextInput,
   View,
+  TouchableOpacity,
+  Image,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
+  Dimensions,
+
 } from "react-native";
 import { onAuthStateChanged, signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "../src/lib/firebase";
 import { Colors } from "@/constants/theme";
 import { useGoogleAuth } from "../src/hooks/useGoogleAuth";
-
+import {LinearGradient} from "expo-linear-gradient";  
+import{useFonts, JosefinSans_400Regular, JosefinSans_500Medium, JosefinSans_600SemiBold} from "@expo-google-fonts/josefin-sans";
 const light = Colors.light;
-
+const{width, height}= Dimensions.get("window");
 export default function LoginScreen() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
+  const[showPassword, setShowPassword] = useState(false);
+  //load fonts
   const { signInWithGoogle, isAuthenticating, errorMessage } = useGoogleAuth();
 
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -30,7 +39,7 @@ export default function LoginScreen() {
       console.log("AUTH STATE:", user ? user.uid : "signed out");
 
       if (user) {
-        router.replace("/(tabs)");
+        router.push("/(tabs)")
       } else {
         setCheckingAuth(false);
       }
@@ -64,74 +73,256 @@ export default function LoginScreen() {
   if (checkingAuth) return null;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Background Gradient */}
+        <LinearGradient
+          colors={['#a1c5a8', '#fef9d4']}
+          style={styles.gradientBackground}
+        />
 
-      <TextInput
-        placeholder="Email"
-        placeholderTextColor={light.icon}
-        value={email}
-        onChangeText={setEmail}
-        style={styles.input}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
+        {/* Tree Background Overlay */}
+        <Image
+          source={require('../assets/images/tree-background.jpg')} // UPDATE THIS PATH
+          style={styles.backgroundImage}
+          resizeMode="cover"
+        />
 
-      <TextInput
-        placeholder="Password"
-        placeholderTextColor={light.icon}
-        value={password}
-        onChangeText={setPassword}
-        style={styles.input}
-        secureTextEntry
-      />
+        {/* Content Container */}
+        <View style={styles.contentContainer}>
+          {/* Header Section */}
+          <View style={styles.headerSection}>
+            <Text style={styles.titleLine1}>Nonna's</Text>
+            <Text style={styles.titleLine2}>Recipes</Text>
+            <Text style={styles.subtitle}>Where recipes tell stories</Text>
+          </View>
 
-      <Button title="Login" onPress={handleLogin} />
+          {/* Form Container */}
+          <View style={styles.formContainer}>
+            {/* Email Field */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Email</Text>
+              <TextInput
+                style={styles.input}
+                value={email}
+                onChangeText={setEmail}
+                placeholder="your@email.com"
+                placeholderTextColor="rgba(10,10,10,0.5)"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoComplete="email"
+              />
+            </View>
 
-      <View style={{ height: 8 }} />
+            {/* Password Field */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Password</Text>
+              <TextInput
+                style={styles.input}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="••••••••"
+                placeholderTextColor="rgba(10,10,10,0.5)"
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+              />
+            </View>
 
-      <Button
-        title={isAuthenticating ? "Signing in..." : "Continue with Google"}
-        onPress={handleGoogleLogin}
-        disabled={isAuthenticating}
-      />
+            {/* Sign In Button */}
+            <TouchableOpacity
+              style={styles.signInButton}
+              onPress={handleLogin}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.signInButtonText}>Sign In</Text>
+            </TouchableOpacity>
 
-      <Pressable style={styles.link} onPress={() => router.push("/register")}>
-        <Text style={styles.linkText}>Don't have an account? Sign up</Text>
-      </Pressable>
-    </View>
+            {/* Forgot Password Link 
+            <TouchableOpacity onPress={handleForgotPassword}>
+              <Text style={styles.forgotPassword}>Forgot password?</Text>
+            </TouchableOpacity>
+              */}
+            {/* Sign Up Link */}
+            <View style={styles.signUpContainer}>
+              <Text style={styles.signUpText}>Don't have an account? </Text>
+              <TouchableOpacity onPress={() => router.push("/register")}>
+                <Text style={styles.signUpLink}>Sign up</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Google Sign In Button */}
+          <TouchableOpacity
+            style={styles.googleButton}
+            onPress={handleGoogleLogin}
+            activeOpacity={0.8}
+          >
+            <Image
+              source={require('../assets/images/google-icon.png')} // UPDATE THIS PATH
+              style={styles.googleIcon}
+            />
+            <Text style={styles.googleButtonText}>Sign in with Google</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    padding: 24,
-    gap: 16,
-    backgroundColor: light.background,
   },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    color: light.text,
+  scrollContent: {
+    flexGrow: 1,
+    minHeight: height,
+  },
+  gradientBackground: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+  },
+  backgroundImage: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    width: '100%',
+    height: '100%',
+    opacity: 0.2,
+  },
+  contentContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 48,
+  },
+  headerSection: {
+    alignItems: 'center',
+    marginBottom: 32,
+  },
+  titleLine1: {
+    fontSize: Math.min(width * 0.15, 58),
+    color: '#7b3306',
+    lineHeight: Math.min(width * 0.15, 58) * 1.2,
+  },
+  titleLine2: {
+    fontSize: Math.min(width * 0.165, 65),
+    color: '#7b3306',
+    lineHeight: Math.min(width * 0.165, 65) * 1.2,
+  },
+  subtitle: {
+    fontSize: Math.min(width * 0.048, 19),
+    color: 'rgba(151,60,0,0.8)',
+    marginTop: 12,
+  },
+  formContainer: {
+    width: '100%',
+    maxWidth: 346,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 15,
+    paddingHorizontal: 32,
+    paddingVertical: 32,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  inputGroup: {
+    marginBottom: 24,
+  },
+  label: {
+    fontSize: 16,
+    color: '#7b3306',
     marginBottom: 8,
   },
   input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 8,
-    padding: 12,
-    backgroundColor: light.background,
-    color: light.text,
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    borderRadius: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     fontSize: 16,
+    color: '#000',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  link: {
-    marginTop: 20,
-    alignItems: "center",
+  signInButton: {
+    backgroundColor: '#ffcc7f',
+    borderRadius: 50,
+    paddingVertical: 20,
+    alignItems: 'center',
+    marginTop: 8,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 8,
   },
-  linkText: {
-    color: light.tint,
-    fontSize: 14,
+  signInButtonText: {
+    fontSize: 16,
+    color: '#fff',
+  },
+  forgotPassword: {
+    fontSize: 16,
+    color: '#973c00',
+    textAlign: 'center',
+    textDecorationLine: 'underline',
+    marginBottom: 8,
+  },
+  signUpContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  signUpText: {
+    fontSize: 16,
+    color: 'rgba(151,60,0,0.8)',
+  },
+  signUpLink: {
+    fontSize: 16,
+    color: '#f77777',
+    textDecorationLine: 'underline',
+  },
+  googleButton: {
+    width: '100%',
+    maxWidth: 346,
+    backgroundColor: 'rgba(255,255,255,0.7)',
+    borderRadius: 15,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  googleIcon: {
+    width: 40,
+    height: 40,
+    marginRight: 12,
+  },
+  googleButtonText: {
+    fontSize: 16,
+    color: '#7b3306',
   },
 });
