@@ -1,59 +1,106 @@
-import { useState, useEffect } from "react";
-import { View, Text, TextInput, Button } from "react-native";
-import { router } from "expo-router";
-import { 
-  loginWithEmail} from "../src/lib/auth";
-import {useGoogleAuth} from "../src/hooks/useGoogleAuth";
+import { useRouter } from "expo-router";
+import React, { useState } from "react";
+import { Alert, Button, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "../src/lib/firebase";
+import { Colors } from "@/constants/theme";
+
+
+const light = Colors.light;
+
 
 export default function LoginScreen() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { promptAsync } = useGoogleAuth();
 
-  // Handle Google redirect result
 
-  async function handleEmailLogin() {
+  const handleLogin = async () => {
     try {
-      await loginWithEmail(email, password);
-      router.replace("/");
-    } catch (err) {
-      console.log("Email login error:", (err as Error).message);
+      router.replace("/(tabs)");
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      console.log("Firebase user:", cred.user.uid);
+      router.replace("/(tabs)");
+    } catch (error) {
+      console.log(error);
+      Alert.alert("Login failed");
     }
-  }
+  };
 
-  async function handleGoogleLogin() {
-    try {
-      await promptAsync();
-      router.replace("/");
-    } catch (err) {
-      console.log("Google login error:", (err as Error).message);
-    }
-  }
 
   return (
-    <View style={{ padding: 20 }}>
-      <Text style={{ fontSize: 28, fontWeight: "bold" }}>Login</Text>
+    <View style={styles.container}>
+      <Text style={styles.title}>Login</Text>
+
 
       <TextInput
         placeholder="Email"
+        placeholderTextColor={light.icon}
         value={email}
         onChangeText={setEmail}
-        style={{ borderWidth: 1, marginTop: 20, padding: 10 }}
+        style={styles.input}
+        autoCapitalize="none"
+        keyboardType="email-address"
       />
+
 
       <TextInput
         placeholder="Password"
-        secureTextEntry
+        placeholderTextColor={light.icon}
         value={password}
         onChangeText={setPassword}
-        style={{ borderWidth: 1, marginTop: 10, padding: 10 }}
+        style={styles.input}
+        secureTextEntry
       />
 
-      <Button title="Login with Email" onPress={handleEmailLogin} />
 
-      <View style={{ height: 20 }} />
+      <Button title="Login" onPress={handleLogin} />
 
-      <Button title="Login with Google" onPress={handleGoogleLogin} />
+
+      <Pressable
+        style = {styles.link}
+        >
+          
+       <Text style = {styles.linkText}>Don't have an account? Sign up</Text>
+      </Pressable>
     </View>
   );
 }
+
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: "center",
+    padding: 24,
+    gap: 16,
+    backgroundColor: light.background,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: light.text,
+    marginBottom: 8,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: light.background,
+    color: light.text,
+    fontSize: 16,
+  },
+  link: {
+    marginTop: 20,
+    alignItems: "center",
+  },
+  linkText: {
+    color: light.tint,
+    fontSize: 14,
+
+
+  },
+
+
+});
