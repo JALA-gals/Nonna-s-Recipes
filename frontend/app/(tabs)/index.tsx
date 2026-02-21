@@ -5,11 +5,15 @@ import {
 } from 'react-native';
 import {
   startRecording, stopRecording,
-  playRecording, getSavedRecordings, deleteRecording,
+  playRecording, pauseRecording, resumeRecording,
+  getSavedRecordings, deleteRecording,
   type Recording
 } from '../../services/audio';
 import { transcribeAudio } from '../../services/whisper';
 import { structureRecipe } from '../../services/gemini';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
+
 
 export default function RecordScreen() {
   const [isRecording, setIsRecording] = useState(false);
@@ -53,9 +57,13 @@ export default function RecordScreen() {
   }
 
   async function handlePlay(uri: string) {
-    setPlayingUri(uri);
-    await playRecording(uri);
-    setPlayingUri(null);
+    if (playingUri === uri) {
+      await pauseRecording();
+      setPlayingUri(null);
+    } else {
+      await playRecording(uri);
+      setPlayingUri(uri);
+    }
   }
 
   async function handleSubmit(uri: string) {
@@ -94,6 +102,32 @@ export default function RecordScreen() {
     });
     loadRecordings();
   }
+  async function handleUpload() {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'audio/*',
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled) return;
+
+      const file = result.assets[0];
+
+      const extension = file.name.split('.').pop() || 'm4a';
+      const fileName = `recording_${Date.now()}.${extension}`;
+      const docDir = FileSystem.documentDirectory;
+      if (!docDir) return;
+
+      const permanentUri = docDir + fileName;
+      await FileSystem.copyAsync({ from: file.uri, to: permanentUri });
+
+      setStatus('File uploaded!');
+      loadRecordings();
+    } catch (e) {
+      setStatus('Upload failed');
+      console.log(e);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -108,6 +142,10 @@ export default function RecordScreen() {
         <Text style={styles.recordBtnText}>
           {isRecording ? '🔴  Recording...' : '🎙  Hold to Record'}
         </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity style={styles.uploadBtn} onPress={handleUpload}>
+        <Text style={styles.uploadBtnText}>📁 Upload Audio File</Text>
       </TouchableOpacity>
 
       <Text style={styles.subheader}>Saved Recordings</Text>
@@ -256,6 +294,16 @@ const styles = StyleSheet.create({
     gap: 2,
     height: 40,
   },
+  uploadBtn: {
+    backgroundColor: '#f5f5f5',
+    padding: 16,
+    borderRadius: 16,
+    alignItems: 'center',
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  uploadBtnText: { fontSize: 16, color: '#333' },
   bar: {
     width: 3,
     borderRadius: 2,
