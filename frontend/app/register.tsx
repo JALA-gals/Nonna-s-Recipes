@@ -1,21 +1,21 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Button, Alert, Pressable, StyleSheet } from "react-native";
+import { Modal, View, Text, TextInput, Button, Alert, Pressable, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { signUpWithEmail } from "../src/lib/auth"; 
 import { Colors } from "@/constants/theme";
-
+import Popup from "@/components/Popup";
 const light = Colors.light;
+
 
 export default function RegisterScreen() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
+  const[popupVisible, setPopupVisible] = useState(false);
   const handleRegister = async () => {
     try {
       const cred = await signUpWithEmail(email, password);
-    
-      router.replace("/"); // go back to login
+      setPopupVisible(true);
     } catch (error) {
       console.log(error);
       Alert.alert("Registration failed");
@@ -50,6 +50,15 @@ export default function RegisterScreen() {
       <Pressable style={styles.link} onPress={() => router.push("/")}>
         <Text style={styles.linkText}>Already have an account? Log in</Text>
       </Pressable>
+      <Popup
+        visible={popupVisible}
+        title="Verification Email Sent"
+        message="Please check your email to verify your account."
+        onClose={() => {
+          setPopupVisible(false);
+          router.replace("/");
+        }}
+      />
     </View>
   );
 }
