@@ -14,8 +14,9 @@ export default function RootLayout() {
   return (
     <>
       <Stack>
+        <Stack.Screen name="register" options={{ headerShown: false }} />
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="(new)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       </Stack>
       <StatusBar style="auto" />
     </>
