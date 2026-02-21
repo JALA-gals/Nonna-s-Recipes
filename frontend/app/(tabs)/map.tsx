@@ -1,24 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import MapView, { Marker, Callout, Region } from "react-native-maps";
 import {
-  View,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  Platform,
-} from "react-native";
-import { subscribeToRecipes } from "../../src/services/recipes";
-
-// Only import maps on native platforms
-let MapView: any;
-let Marker: any;
-let Callout: any;
-
-if (Platform.OS !== "web") {
-  const maps = require("react-native-maps");
-  MapView = maps.default;
-  Marker = maps.Marker;
-  Callout = maps.Callout;
-}
+  subscribeToRecipes,
+  updateRecipeOriginCoords,
+} from "@/src/services/recipes";
+import { geocodePlace } from "@/src/services/geocode";
 
 type Recipe = {
   id: string;
@@ -31,19 +18,26 @@ type Recipe = {
   };
 };
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 export default function MapScreen() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Track which recipe IDs we've attempted to geocode this session
+  const attempted = useRef<Set<string>>(new Set());
+  const running = useRef(false);
+
   useEffect(() => {
     const unsub = subscribeToRecipes((rows) => {
+      console.log("MAP RECEIVED RECIPES:", rows.length);
       setRecipes(rows as Recipe[]);
       setLoading(false);
     });
     return unsub;
   }, []);
 
-  const mappable = useMemo(() => {
+  const pinned = useMemo(() => {
     return recipes.filter((r) => {
       const lat = r.origin?.lat;
       const lng = r.origin?.lng;
@@ -51,26 +45,58 @@ export default function MapScreen() {
     });
   }, [recipes]);
 
-  // -------------------------
-  // WEB VERSION
-  // -------------------------
-  if (Platform.OS === "web") {
-    return (
-      <View style={styles.webContainer}>
-        <Text style={styles.webTitle}>Oops 😅</Text>
-        <Text style={styles.webText}>
-          Sorry, the interactive map is only compatible with phones.
-        </Text>
-        <Text style={styles.webSub}>
-          Open this app in Expo Go on your mobile device to explore recipe
-          locations.
-        </Text>
-      </View>
-    );
-  }
+  const missing = useMemo(() => {
+    return recipes.filter((r) => {
+      const lat = r.origin?.lat;
+      const lng = r.origin?.lng;
+      const hasCoords = typeof lat === "number" && typeof lng === "number";
+      const hasText = !!r.origin?.name && !!r.origin?.countryCode;
+      return !hasCoords && hasText;
+    });
+  }, [recipes]);
 
-  const initialRegion = useMemo(() => {
-    const first = mappable[0];
+  useEffect(() => {
+    if (running.current) return;
+    if (missing.length === 0) return;
+
+    running.current = true;
+
+    (async () => {
+      console.log("MISSING COORDS COUNT:", missing.length);
+
+      for (const r of missing) {
+        if (attempted.current.has(r.id)) continue;
+        attempted.current.add(r.id);
+
+        const place = r.origin?.name?.trim() ?? "";
+        const cc = r.origin?.countryCode?.trim().toUpperCase() ?? "";
+
+        console.log("AUTO-GEOCODING:", r.id, place, cc);
+
+        try {
+          const coords = await geocodePlace(place, cc);
+          console.log("AUTO-GEOCODE RESULT:", r.id, coords);
+
+          if (coords) {
+            await updateRecipeOriginCoords(r.id, coords.lat, coords.lng);
+            console.log("WROTE COORDS TO FIRESTORE:", r.id);
+          } else {
+            console.log("NO COORDS FOUND:", r.id, place, cc);
+          }
+        } catch (e) {
+          console.log("AUTO-GEOCODE / UPDATE ERROR:", r.id, e);
+        }
+
+        // Nominatim rate-limit friendly: space out requests
+        await sleep(900);
+      }
+
+      running.current = false;
+    })();
+  }, [missing]);
+
+  const initialRegion: Region = useMemo(() => {
+    const first = pinned[0];
     if (first?.origin?.lat && first?.origin?.lng) {
       return {
         latitude: first.origin.lat,
@@ -85,7 +111,7 @@ export default function MapScreen() {
       latitudeDelta: 50,
       longitudeDelta: 50,
     };
-  }, [mappable]);
+  }, [pinned]);
 
   if (loading) {
     return (
@@ -99,31 +125,32 @@ export default function MapScreen() {
   return (
     <View style={styles.container}>
       <MapView style={styles.map} initialRegion={initialRegion}>
-        {mappable.map((r) => (
-          <Marker
-            key={r.id}
-            coordinate={{
-              latitude: r.origin!.lat as number,
-              longitude: r.origin!.lng as number,
-            }}
-          >
-            <Callout>
-              <View style={{ maxWidth: 220 }}>
-                <Text style={{ fontWeight: "700" }}>{r.title ?? "Recipe"}</Text>
-                <Text>
-                  {(r.origin?.name ?? "Unknown") +
-                    (r.origin?.countryCode ? `, ${r.origin.countryCode}` : "")}
-                </Text>
-              </View>
-            </Callout>
-          </Marker>
-        ))}
+        {pinned.map((r) => {
+          const label = r.origin?.name ?? "Unknown";
+          const cc = r.origin?.countryCode ? `, ${r.origin.countryCode}` : "";
+
+          return (
+            <Marker
+              key={r.id}
+              coordinate={{
+                latitude: r.origin!.lat as number,
+                longitude: r.origin!.lng as number,
+              }}
+            >
+              <Callout>
+                <View style={{ maxWidth: 220 }}>
+                  <Text style={{ fontWeight: "700" }}>{r.title ?? "Recipe"}</Text>
+                  <Text>{label + cc}</Text>
+                </View>
+              </Callout>
+            </Marker>
+          );
+        })}
       </MapView>
 
       <View style={styles.footer}>
         <Text style={styles.footerText}>
-          Showing {mappable.length} pinned recipe
-          {mappable.length === 1 ? "" : "s"}.
+          Pinned: {pinned.length} • Missing: {missing.length} • Total: {recipes.length}
         </Text>
       </View>
     </View>
@@ -146,27 +173,4 @@ const styles = StyleSheet.create({
     borderColor: "#eee",
   },
   footerText: { textAlign: "center" },
-
-  // Web styles
-  webContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 30,
-  },
-  webTitle: {
-    fontSize: 28,
-    fontWeight: "700",
-    marginBottom: 10,
-  },
-  webText: {
-    fontSize: 16,
-    textAlign: "center",
-    marginBottom: 10,
-  },
-  webSub: {
-    fontSize: 14,
-    textAlign: "center",
-    opacity: 0.7,
-  },
 });
