@@ -18,6 +18,10 @@ export default function LoginScreen() {
   const handleLogin = async () => {
     try {
       const cred = await signInWithEmailAndPassword(auth, email, password);
+      if (!cred.user.emailVerified) {
+        Alert.alert("Email not verified", "Please verify your email before logging in.");
+        return;
+      }
       console.log("Firebase user:", cred.user.uid);
       router.replace("/(tabs)");
     } catch (error) {
