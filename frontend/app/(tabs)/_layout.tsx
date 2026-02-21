@@ -12,7 +12,7 @@ export default function TabLayout() {
       />
 
       <Tabs.Screen
-        name="add"
+        name="index"
         options={{
           title: "Add Recipe",
         }}

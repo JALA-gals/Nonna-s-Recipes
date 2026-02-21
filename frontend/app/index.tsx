@@ -39,7 +39,7 @@ export default function LoginScreen() {
       console.log("AUTH STATE:", user ? user.uid : "signed out");
 
       if (user) {
-        router.replace("/(tabs)");
+        router.push("/(tabs)")
       } else {
         setCheckingAuth(false);
       }
