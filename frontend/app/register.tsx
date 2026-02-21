@@ -1,36 +1,32 @@
-import { useRouter } from "expo-router";
 import React, { useState } from "react";
-import { Alert, Button, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "../src/lib/firebase";
+import { View, Text, TextInput, Button, Alert, Pressable, StyleSheet } from "react-native";
+import { useRouter } from "expo-router";
+import { signUpWithEmail } from "../src/lib/auth"; 
 import { Colors } from "@/constants/theme";
-
 
 const light = Colors.light;
 
-
-export default function LoginScreen() {
+export default function RegisterScreen() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-
-  const handleLogin = async () => {
+  const handleRegister = async () => {
     try {
-      const cred = await signInWithEmailAndPassword(auth, email, password);
-      console.log("Firebase user:", cred.user.uid);
-      router.replace("/(tabs)");
+      const cred = await signUpWithEmail(email, password);
+      console.log("Registered user:", cred.user.uid);
+
+      // After successful signup, send them to login or tabs
+      router.replace("/"); // go back to login
     } catch (error) {
       console.log(error);
-      Alert.alert("Login failed");
+      Alert.alert("Registration failed");
     }
   };
 
-
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
-
+      <Text style={styles.title}>Create Account</Text>
 
       <TextInput
         placeholder="Email"
@@ -42,7 +38,6 @@ export default function LoginScreen() {
         keyboardType="email-address"
       />
 
-
       <TextInput
         placeholder="Password"
         placeholderTextColor={light.icon}
@@ -52,21 +47,14 @@ export default function LoginScreen() {
         secureTextEntry
       />
 
+      <Button title="Sign Up" onPress={handleRegister} />
 
-      <Button title="Login" onPress={handleLogin} />
-
-
-      <Pressable
-        style = {styles.link}
-        onPress={() => router.push("/register")}
-        >
-          
-       <Text style = {styles.linkText}>Don't have an account? Sign up</Text>
+      <Pressable style={styles.link} onPress={() => router.push("/")}>
+        <Text style={styles.linkText}>Already have an account? Log in</Text>
       </Pressable>
     </View>
   );
 }
-
 
 const styles = StyleSheet.create({
   container: {
@@ -98,9 +86,5 @@ const styles = StyleSheet.create({
   linkText: {
     color: light.tint,
     fontSize: 14,
-
-
   },
-
-
 });
