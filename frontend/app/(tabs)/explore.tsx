@@ -1,71 +1,188 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
   StyleSheet,
   FlatList,
-  Image,
   ScrollView,
   TouchableOpacity,
+  useWindowDimensions,
 } from "react-native";
-import {subscribeToRecipes} from "../../src/services/recipes";
-import {useWindowDimensions, Alert } from "react-native";
-import { FamilyStoryCard, type FamilyStory } from "../../components/family-stories";
-import type { RecipeDoc } from "../../src/services/recipes";
-import RecipeDetail from "@/components/RecipeDetailRN";
 import { LinearGradient } from "expo-linear-gradient";
-import RecipeCard from "./components/RecipeCard";
+
+import { subscribeToRecipes } from "../../src/services/recipes";
+import type { RecipeDoc } from "../../src/services/recipes";
+
+import { FamilyStoryCard, type FamilyStory } from "../../components/family-stories";
+
+import RecipeDetail from "@/components/RecipeDetailRN";
+import type { RecipeData, InstructionStep } from "@/components/RecipeDetailRN";
+
 import RegionButton from "./components/RegionButton";
 
 export default function App() {
-  const [stories, setStories] = useState<FamilyStory[]>([]);
-    const [showDetail, setShowDetail] = useState(false);
-    const { width } = useWindowDimensions();
-    const padding = 16;
-    const gap = 16;
-    const numColumns = 2;
-    const cardWidth = (width - padding * 2 - gap * (numColumns - 1)) / numColumns;
-    const [selectedRecipe, setSelectedRecipe] = useState<FamilyStory | null>(null);  useEffect(() => {
-      const unsub = subscribeToRecipes((rows) => {
-        const mapped: FamilyStory[] = rows.map((recipe: RecipeDoc & { id: string }) => ({
-          id: recipe.id,
-          title: recipe.title,
-          recipeName: recipe.title,
-          familyName: recipe.storyteller || "Unknown Family",
-          locationText: `${recipe.origin.name}, ${recipe.origin.countryCode}`,
-          imageUrl: recipe.photoUrl || "https://placehold.co/600x400",
-          likeCount: 0,
-          generations: 1,
-        }));
-    
-        setStories(mapped);
-      });
-    
-      return () => unsub();
-    }, []);
-  const recipes = [
-    {
-      title: "Abuela's Street Tacos",
-      familyName: "Rodriguez Family",
-      location: "Mexico City, Mexico",
-      generations: 5,
-      likes: 234,
-      //image: require("./assets/tacos.png"),
-      overlayColor: "rgba(255,214,168,0.6)",
-      titleFont: "josefin",
-    },
-    {
-      title: "Nonna's Pizza Margherita",
-      familyName: "Ricci Family",
-      location: "Naples, Italy",
-      generations: 4,
-      likes: 567,
-     // image: require("./assets/pizza.png"),
-      overlayColor: "rgba(255,204,211,0.6)",
-      titleFont: "josefin",
-    },
-    // add others the same way
-  ];
+  // --- STATE ---
+  // Keep raw Firestore docs here
+  const [recipes, setRecipes] = useState<(RecipeDoc & { id: string })[]>([]);
+
+  // Modal state + selected recipe in the exact type RecipeDetail expects
+  const [showDetail, setShowDetail] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState<RecipeData | undefined>(undefined);
+
+  // --- LAYOUT ---
+  const { width } = useWindowDimensions();
+  const padding = 16;
+  const gap = 16;
+  const numColumns = 2;
+  const cardWidth = (width - padding * 2 - gap * (numColumns - 1)) / numColumns;
+
+  // --- MAPPERS ---
+  // RecipeDoc -> FamilyStory (for cards)
+  const toFamilyStory = (r: RecipeDoc & { id: string }): FamilyStory => {
+    const imageUrl = r.photoUrl || "https://placehold.co/600x400";
+
+    const recipeName =
+      (r as any).recipeName ??
+      (r as any).title ??
+      (r as any).name ??
+      "Untitled Recipe";
+
+    const familyName =
+      (r as any).familyName ??
+      (r as any).family ??
+      (r as any).originalRecipeFrom ??
+      "Unknown Family";
+
+    const locationText = r.origin
+      ? `${r.origin.name}, ${r.origin.countryCode}`
+      : undefined;
+
+    return {
+      id: r.id,
+      title: recipeName, // your FamilyStoryCard displays story.title
+      familyName,
+      recipeName,
+      imageUrl,
+      locationText,
+      likeCount: (r as any).likeCount,
+      generations: (r as any).generations,
+    };
+  };
+  // Converts Firestore ingredients into string[] for RecipeDetailRN
+const ingredientsToStrings = (raw: any): string[] => {
+  if (!Array.isArray(raw)) return [];
+
+  // Already string[]
+  if (raw.length === 0 || typeof raw[0] === "string") {
+    return raw.filter((x: any) => typeof x === "string");
+  }
+
+  // Otherwise assume objects like { amount, item, preparation, note }
+  return raw.map((ing: any) => {
+    if (!ing || typeof ing !== "object") return String(ing);
+
+    const amount = ing.amount ? String(ing.amount).trim() : "";
+    const item = ing.item ? String(ing.item).trim() : "";
+    const prep = ing.preparation ? String(ing.preparation).trim() : "";
+    const note = ing.note ? String(ing.note).trim() : "";
+
+    const main = [amount, item].filter(Boolean).join(" ").trim();
+    const extras = [prep, note].filter(Boolean).join(", ").trim();
+
+    return extras ? `${main} (${extras})` : main || "Ingredient";
+  });
+};
+// Converts Firestore instructions into InstructionStep[]
+const instructionsToSteps = (raw: any): InstructionStep[] | undefined => {
+  if (!raw) return undefined;
+
+  // Case 1: string[]
+  if (Array.isArray(raw) && (raw.length === 0 || typeof raw[0] === "string")) {
+    const arr = raw.filter((x: any) => typeof x === "string" && x.trim().length > 0);
+    return arr.length
+      ? arr.map((desc: string, i: number) => ({ stepNumber: i + 1, description: desc }))
+      : undefined;
+  }
+
+  // Case 2: already [{stepNumber, description}]
+  if (Array.isArray(raw) && raw.length > 0 && typeof raw[0] === "object") {
+    // Try a few common key names
+    const mapped = raw
+      .map((s: any, i: number) => {
+        const stepNumber = Number(s.stepNumber ?? s.step ?? i + 1);
+        const description =
+          String(s.description ?? s.text ?? s.instruction ?? s.instructions ?? "").trim();
+        if (!description) return null;
+        return { stepNumber, description };
+      })
+      .filter(Boolean) as InstructionStep[];
+
+    return mapped.length ? mapped : undefined;
+  }
+
+  // Case 3: single string (maybe multi-line)
+  if (typeof raw === "string") {
+    const lines = raw
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    return lines.length
+      ? lines.map((desc, i) => ({ stepNumber: i + 1, description: desc }))
+      : undefined;
+  }
+
+  return undefined;
+};
+  // RecipeDoc -> RecipeData (for RecipeDetail modal)
+  const toRecipeData = (r: RecipeDoc & { id: string }): RecipeData => {
+    const recipeName =
+      (r as any).recipeName ??
+      (r as any).title ??
+      (r as any).name ??
+      "Untitled Recipe";
+
+    const imageUrl = r.photoUrl || "https://placehold.co/600x400";
+
+    const originLocation = r.origin
+      ? `${r.origin.name}, ${r.origin.countryCode}`
+      : undefined;
+
+    // If instructions come as string[], convert to InstructionStep[]
+    const instructionsFromStrings = (arr?: string[]): InstructionStep[] | undefined =>
+      Array.isArray(arr)
+        ? arr.map((desc, i) => ({ stepNumber: i + 1, description: desc }))
+        : undefined;
+
+    const instructions = instructionsToSteps(
+  (r as any).instructions ?? (r as any).steps ?? (r as any).directions
+);
+    return {
+      id: r.id,
+      recipeName,
+      imageUrl,
+
+      originalRecipeFrom: (r as any).originalRecipeFrom ?? (r as any).familyName,
+      originLocation,
+      estimatedCreationDate: (r as any).estimatedCreationDate,
+
+      ingredients: ingredientsToStrings((r as any).ingredients),
+      instructions,
+      familyStory: (r as any).familyStory ?? (r as any).story,
+    };
+  };
+
+  // --- FIRESTORE SUBSCRIPTION ---
+  useEffect(() => {
+    const unsub = subscribeToRecipes((rows) => {
+      setRecipes(rows);
+    });
+
+    return () => unsub();
+  }, []);
+
+  // Derived UI stories from raw recipes
+  const stories: FamilyStory[] = useMemo(() => recipes.map(toFamilyStory), [recipes]);
 
   const regions = [
     { emoji: "🍜", label: "Asia", bgColor: "rgba(255,161,173,0.7)" },
@@ -76,17 +193,12 @@ export default function App() {
   ];
 
   return (
-    <LinearGradient
-      colors={["#a1c5a8", "#fbf2cc"]}
-      style={{ flex: 1 }}
-    >
+    <LinearGradient colors={["#a1c5a8", "#fbf2cc"]} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={styles.container}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.title}>Explore</Text>
-          <Text style={styles.subtitle}>
-            Discover family stories
-          </Text>
+          <Text style={styles.subtitle}>Discover family stories</Text>
         </View>
 
         {/* Region Section */}
@@ -104,7 +216,7 @@ export default function App() {
 
         <FlatList
           data={stories}
-          keyExtractor={(_, index) => index.toString()}
+          keyExtractor={(item) => item.id}
           numColumns={2}
           scrollEnabled={false}
           columnWrapperStyle={{ justifyContent: "space-between" }}
@@ -112,39 +224,38 @@ export default function App() {
             <View
               style={{
                 width: cardWidth,
-                transform: [
-                  { rotate: index % 2 === 0 ? "-1deg" : "1deg" }],
-                  marginBottom:16,
+                transform: [{ rotate: index % 2 === 0 ? "-1deg" : "1deg" }],
+                marginBottom: 16,
               }}
             >
               <FamilyStoryCard
-                            story={item}
-                            onPress={(id) => {
-                              setSelectedRecipe(stories.find(s => s.id === id) || null);
-                              setShowDetail(true);
-                            }}
-                          />
+                story={item}
+                onPress={(id) => {
+                  const raw = recipes.find((r) => r.id === id);
+                  if (!raw) return;
+
+                  setSelectedRecipe(toRecipeData(raw));
+                  setShowDetail(true);
+                }}
+              />
             </View>
           )}
         />
-        {selectedRecipe && (
-                <RecipeDetail
-                  visible={showDetail}                  
-                  onClose={() => setShowDetail(false)}
-                  recipe={selectedRecipe}
-                />
-              )}
+
+        {/* Detail Modal */}
+        <RecipeDetail
+          visible={showDetail}
+          onClose={() => setShowDetail(false)}
+          recipe={selectedRecipe}
+        />
+
         {/* CTA */}
         <View style={styles.cta}>
           <Text style={styles.ctaTitle}>Share Your Story</Text>
-          <Text style={styles.ctaSubtitle}>
-            Every recipe has a history. Add yours!
-          </Text>
+          <Text style={styles.ctaSubtitle}>Every recipe has a history. Add yours!</Text>
 
           <TouchableOpacity style={styles.ctaButton}>
-            <Text style={styles.ctaButtonText}>
-              Add Your Recipe
-            </Text>
+            <Text style={styles.ctaButtonText}>Add Your Recipe</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

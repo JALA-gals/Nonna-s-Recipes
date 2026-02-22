@@ -14,9 +14,9 @@
  * />
  */
 
-import React from 'react';
-import {useState} from 'react';
+import React, { useState, useEffect } from 'react';
 import * as ImagePicker from 'expo-image-picker';
+import { getDownloadURL, ref } from "firebase/storage";
 import {
   View,
   Text,
@@ -109,8 +109,11 @@ export default function RecipeDetail({
 }: RecipeDetailProps) {
   // UPDATE THIS PATH to your background image
   const backgroundImage = require('../assets/images/tree-background.jpg');
-  const [localImage, setLocalImage] = useState(recipe?.imageUrl || null);
-  const pickImage = async () => {
+const [localImage, setLocalImage] = useState<string | null>(null);
+
+useEffect(() => {
+  setLocalImage(recipe?.imageUrl ?? null);
+}, [recipe?.imageUrl]);  const pickImage = async () => {
     // Ask for permission to access media library
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (permissionResult.granted === false) {
@@ -278,8 +281,8 @@ export default function RecipeDetail({
       ) : (
         <Text style={styles.placeholderText}>No instructions available</Text>
       )}
-    </View>
   </View>
+</View>
 
           {/* Family Story Section */}
           <View style={styles.section}>
@@ -292,24 +295,7 @@ export default function RecipeDetail({
             </View>
           </View>
 
-          {/* Action Buttons */}
-          <View style={styles.buttonSection}>
-            <TouchableOpacity
-              onPress={onStartCooking}
-              style={styles.primaryButton}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.primaryButtonText}>Start Cooking</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              onPress={onShare}
-              style={styles.secondaryButton}
-              activeOpacity={0.8}
-            >
-              <Text style={styles.secondaryButtonText}>Share with Family</Text>
-            </TouchableOpacity>
-          </View>
+          
         </ScrollView>
       </ImageBackground>
     </SafeAreaView>
