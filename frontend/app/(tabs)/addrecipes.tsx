@@ -207,13 +207,6 @@ export default function AddRecipePage() {
           </TouchableOpacity>
         </View>
 
-        {/* Convert Recipe Button */}
-        <View style={styles.convertButtonContainer}>
-          <TouchableOpacity style={styles.convertButton} onPress={handleConvert}>
-            <Text style={styles.convertButtonText}>Convert Recipe</Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Recipe Photo */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recipe Photo</Text>
