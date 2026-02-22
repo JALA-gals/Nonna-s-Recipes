@@ -1,53 +1,31 @@
 import React, { useState } from "react";
-import { View, Text, Pressable, StyleSheet } from "react-native";
-import SettingsModal from "../../components/settings-modal";
+import { View, Text, Button, Alert } from "react-native";
+import { seedDummyRecipes } from "../../src/services/seedRecipes";
 
-export default function SettingsTestScreen() {
-  const [open, setOpen] = useState(false);
+export default function SettingsTest() {
+  const [loading, setLoading] = useState(false);
+
+  const runSeed = async () => {
+    try {
+      setLoading(true);
+      const res = await seedDummyRecipes(20); // change to 30, 50, etc.
+      Alert.alert("Seed complete", `Seeded ${res.seeded} recipes`);
+    } catch (e: any) {
+      console.log("Seed error:", e);
+      Alert.alert("Seed failed", e?.message ?? "Unknown error");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Settings Modal Test</Text>
-
-      <Pressable
-        onPress={() => setOpen(true)}
-        style={styles.openButton}
-      >
-        <Text style={styles.openButtonText}>Open Settings</Text>
-      </Pressable>
-
-      <SettingsModal
-        isOpen={open}
-        onClose={() => setOpen(false)}
-        onPressLogOut={() => {
-          console.log("Logout pressed");
-          setOpen(false);
-        }}
+    <View style={{ padding: 16, gap: 12 }}>
+      <Text style={{ fontSize: 18, fontWeight: "600" }}>Dev Tools</Text>
+      <Button
+        title={loading ? "Seeding..." : "Seed Dummy Recipes"}
+        onPress={runSeed}
+        disabled={loading}
       />
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#eef4ea",
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 24,
-  },
-  title: {
-    fontSize: 20,
-    marginBottom: 20,
-  },
-  openButton: {
-    backgroundColor: "#D4824A",
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  openButtonText: {
-    color: "white",
-    fontWeight: "600",
-  },
-});
