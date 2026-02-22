@@ -5,7 +5,7 @@ import { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 
 const { width } = Dimensions.get("window");
 
-const TAB_ORDER = ["homepage", "explore", "addrecipes", "map", "UserRecipes"] as const;
+const TAB_ORDER = ["index", "explore", "addrecipes", "map", "UserRecipes"] as const;
 type TabName = (typeof TAB_ORDER)[number];
 
 export default function CustomTabBar({ state, navigation }: BottomTabBarProps) {
@@ -63,7 +63,7 @@ function getIcon(name: TabName, focused: boolean) {
   const opacity = focused ? 1 : 0.7;
 
   switch (name) {
-    case "homepage":
+    case "index":
       return <Ionicons name="home-outline" size={24} color={color} style={{ opacity }} />;
     case "explore":
       return <Ionicons name="compass-outline" size={24} color={color} style={{ opacity }} />;
