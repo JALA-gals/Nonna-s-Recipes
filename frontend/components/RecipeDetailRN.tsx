@@ -14,8 +14,9 @@
  * - Share with Family button
  */
 
-import React, { useEffect, useMemo, useState } from "react";
-import * as ImagePicker from "expo-image-picker";
+import React, { useState, useEffect } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import { getDownloadURL, ref } from "firebase/storage";
 import {
   View,
   Text,
@@ -88,16 +89,14 @@ export default function RecipeDetailRN({
   onClose,
   onEdit,
 }: RecipeDetailProps) {
-  const backgroundImage = require("../assets/images/tree-background.jpg");
+  // UPDATE THIS PATH to your background image
+  const backgroundImage = require('../assets/images/tree-background.jpg');
+const [localImage, setLocalImage] = useState<string | null>(null);
 
-  const [localImage, setLocalImage] = useState<string | null>(null);
-
-  // When recipe changes, use its photoUrl unless user picked a local one
-  useEffect(() => {
-    setLocalImage(recipe?.photoUrl ?? null);
-  }, [recipe?.id]);
-
-  const pickImage = async () => {
+useEffect(() => {
+  setLocalImage(recipe?.imageUrl ?? null);
+}, [recipe?.imageUrl]);  const pickImage = async () => {
+    // Ask for permission to access media library
     const permissionResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permissionResult.granted) {
       alert("Permission to access media library is required!");
@@ -240,6 +239,32 @@ export default function RecipeDetailRN({
                 )}
               </View>
             </View>
+          </View>
+
+          {/* Instructions Section */}
+          <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Instructions</Text>
+          <View style={styles.contentCard}>
+            {Array.isArray(recipe.instructions) && recipe.instructions.length > 0 ? (
+              recipe.instructions.map((step) => (
+                <View key={step.stepNumber} style={styles.stepContainer}>
+                   <Text style={styles.stepTitle}>Step {step.stepNumber}:</Text>
+                  <Text style={styles.stepDescription}>{step.description}</Text>
+                </View>
+        ))
+      ) : (
+        <Text style={styles.placeholderText}>No instructions available</Text>
+      )}
+  </View>
+</View>
+
+          {/* Family Story Section */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Family Story</Text>
+            <View style={styles.storyCard}>
+             <Text style={styles.storyText}>
+                {recipe.familyStory || "No family story available"}
+              </Text>
 
             {/* Instructions */}
             <View style={styles.section}>
@@ -264,12 +289,12 @@ export default function RecipeDetailRN({
                 )}
               </View>
             </View>
+          </View>
 
-            {/* ✅ Removed: Family Story section */}
-            {/* ✅ Removed: Start Cooking + Share buttons */}
-          </ScrollView>
-        </ImageBackground>
-      </SafeAreaView>
+          
+        </ScrollView>
+      </ImageBackground>
+    </SafeAreaView>
     </Modal>
   );
 }
