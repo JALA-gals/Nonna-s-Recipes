@@ -3,14 +3,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Platform } from "react-native";
 import * as Google from "expo-auth-session/providers/google";
 import * as WebBrowser from "expo-web-browser";
-
 import { auth } from "../lib/firebase";
 import {
   GoogleAuthProvider,
-  getRedirectResult,
   signInWithCredential,
   signInWithPopup,
-  signInWithRedirect,
 } from "firebase/auth";
 
 WebBrowser.maybeCompleteAuthSession();
@@ -20,16 +17,17 @@ export function useGoogleAuth() {
   const [errorMessage, setErrorMessage] = useState(null);
   const inFlightRef = useRef(false);
 
+  // Strong web detection
   const isWeb = typeof window !== "undefined" && Platform.OS === "web";
 
-  // Provider reused on web
+  // Provider once (web)
   const webProvider = useMemo(() => {
     const p = new GoogleAuthProvider();
     p.setCustomParameters({ prompt: "select_account" });
     return p;
   }, []);
 
-  // Native-only request (Expo Go)
+  // Native request (Expo Go)
   const [request, response, promptAsync] = Google.useAuthRequest({
     expoClientId: process.env.EXPO_PUBLIC_GOOGLE_EXPO_CLIENT_ID,
     webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
@@ -38,23 +36,7 @@ export function useGoogleAuth() {
     scopes: ["openid", "profile", "email"],
   });
 
-  // WEB: finish redirect sign-in if we used signInWithRedirect
-  useEffect(() => {
-    if (!isWeb) return;
-    (async () => {
-      try {
-        const res = await getRedirectResult(auth);
-        if (res?.user) {
-          console.log("WEB redirect result UID:", res.user.uid);
-        }
-      } catch (e) {
-        // If no redirect happened, this can be null; that's fine.
-        console.log("getRedirectResult error:", e);
-      }
-    })();
-  }, [isWeb]);
-
-  // NATIVE: when expo-auth-session succeeds, sign into Firebase with credential
+  // Native completion: Google -> Firebase
   useEffect(() => {
     if (isWeb) return;
     if (!response) return;
@@ -89,14 +71,16 @@ export function useGoogleAuth() {
       setErrorMessage(null);
       setIsAuthenticating(true);
 
-      // Try popup first (best UX)
       const cred = await signInWithPopup(auth, webProvider);
-      console.log("WEB popup UID:", cred.user.uid);
+      console.log("WEB Firebase UID:", cred.user.uid);
+      console.log("WEB auth.currentUser:", auth.currentUser?.uid);
+
       return cred;
-    } catch (e) {
-      // Popup blocked -> redirect fallback
-      console.log("Popup failed, falling back to redirect:", e);
-      await signInWithRedirect(auth, webProvider);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("WEB Google sign-in error:", msg);
+      setErrorMessage(msg);
+      throw err;
     } finally {
       setIsAuthenticating(false);
       inFlightRef.current = false;
@@ -107,7 +91,9 @@ export function useGoogleAuth() {
     if (inFlightRef.current) return;
     inFlightRef.current = true;
 
-    if (isWeb) return signInWithGoogleWeb();
+    if (isWeb) {
+      return signInWithGoogleWeb();
+    }
 
     try {
       setErrorMessage(null);
