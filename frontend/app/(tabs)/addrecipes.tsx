@@ -3,16 +3,21 @@ import {
   View,
   Text,
   TextInput,
+  Image,
   TouchableOpacity,
   ScrollView,
   StyleSheet,
   Dimensions,
+  Alert,
 } from 'react-native';
+import * as ImageManipulator from 'expo-image-manipulator';
+import {getStorage, ref, uploadBytes, getDownloadURL} from 'firebase/storage';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-
+import {createTestRecipe} from '../../src/services/createRecipeWithGeo';
 const { width } = Dimensions.get('window');
 
 export default function AddRecipePage() {
@@ -27,6 +32,111 @@ export default function AddRecipePage() {
   const [originLocation, setOriginLocation] = useState('');
   const [creationDate, setCreationDate] = useState('');
   const [familyStory, setFamilyStory] = useState('');
+  const [photo, setPhoto]=useState<string | null>(null);
+  // Image picker
+  const pickImage = async () => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      alert("Permission to access photos is required");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      setPhoto(result.assets[0].uri);
+    }
+  };
+  //convert image
+  async function convertToJpeg(uri: string) {
+    const result = await ImageManipulator.manipulateAsync(
+      uri,
+      [],
+      { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
+    );
+    return result.uri;
+  }
+
+  // Image upload helper
+  async function uploadImageAsync(uri: string) {
+    try {
+      console.log("Uploading image from:", uri);
+
+      const jpegUri = await convertToJpeg(uri);
+
+      const blob: Blob = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.onload = () => resolve(xhr.response);
+        xhr.onerror = () => reject(new TypeError("Network request failed"));
+        xhr.responseType = "blob";
+        xhr.open("GET", jpegUri, true);
+        xhr.send(null);
+      });
+
+      const storage = getStorage();
+      const storageRef = ref(storage, `recipePhotos/${Date.now()}.jpg`);
+
+      await uploadBytes(storageRef, blob);
+
+
+      const downloadUrl = await getDownloadURL(storageRef);
+
+      return downloadUrl;
+    } catch (err: any) {
+      console.log("UPLOAD ERROR FULL:", err);
+      throw err;
+    }
+  }
+
+
+  // saving to the database
+  const handleSave = async () => {
+  try {
+    let uploadedImageUrl = null;
+
+    if (photo) {
+      uploadedImageUrl = await uploadImageAsync(photo);
+    }
+
+    const { id, coords } = await createTestRecipe({
+      title: recipeName,
+      place: originLocation,
+      countryCode: "US",
+      photoUrl: uploadedImageUrl,
+      ingredients: ingredients.split('\n').map(line => {
+        const [amount, ...itemParts] = line.trim().split(' ');
+        return {
+          item: itemParts.join(' '),
+          amount,
+          preparation: '',
+          note: '',
+        };
+      }),
+      steps: instructions.split('\n').map((line, index) => ({
+        step: index + 1,
+        instruction: line.trim(),
+        tip: '',
+        note: '',
+      })),
+      story: familyStory,
+      storyteller: ancestryName,
+      creationDate,
+    });
+
+    Alert.alert(
+      coords ? "Created recipe + pinned!" : "Created recipe (no pin)",
+      coords
+        ? `Pinned at ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`
+        : "Couldn’t find coordinates."
+    );
+  } catch (e: any) {
+    Alert.alert("Save failed", e.message);
+  }
+};
+
 
   // Auto-fill logic from Gemini transcription
   useEffect(() => {
@@ -107,16 +217,28 @@ export default function AddRecipePage() {
         {/* Recipe Photo */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recipe Photo</Text>
-          <TouchableOpacity style={styles.photoPlaceholder}>
-            <View style={styles.cameraIconContainer}>
-              <Ionicons name="camera" size={32} color="#7b3306" />
-            </View>
-            <Text style={styles.photoTitle}>Add Photo</Text>
-            <Text style={styles.photoSubtitle}>
-              Tap to upload or take a picture
-            </Text>
+
+          <TouchableOpacity style={styles.photoPlaceholder} onPress={pickImage}>
+            {photo ? (
+              <Image
+                source={{ uri: photo }}
+                style={{ width: "100%", height: "100%", borderRadius: 12 }}
+                resizeMode="cover"
+              />
+            ) : (
+              <>
+                <View style={styles.cameraIconContainer}>
+                  <Ionicons name="camera" size={32} color="#7b3306" />
+                </View>
+                <Text style={styles.photoTitle}>Add Photo</Text>
+                <Text style={styles.photoSubtitle}>
+                  Tap to upload or take a picture
+                </Text>
+              </>
+            )}
           </TouchableOpacity>
         </View>
+
 
         {/* Recipe Name */}
         <View style={styles.section}>
@@ -235,7 +357,7 @@ export default function AddRecipePage() {
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={styles.publishButton}>
+          <TouchableOpacity style={styles.publishButton} onPress={handleSave}>
             <Text style={styles.publishButtonText}>Publish Recipe</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.draftButton}>
