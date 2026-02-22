@@ -23,6 +23,7 @@ Through this project, we learned that effective full-stack development requires 
 ## What's next for Nonna's Recipes
 We plan to enhance user accessibility by implementing features such as screen reader support, adjustable text sizes, and simplified navigation to ensure the app is usable by all members of the community. Additionally, we aim to incorporate food ancestry tracking,  giving you the ability to trace the ancestry of your food.
 
+## How to run our Software
 
 How to run, clone GitHub repo. CD into the frontend folder. Then:
 run [npm install], then run [npx expo start], instructions will appear to help guide you in running the app on your phone through the Expo app.
