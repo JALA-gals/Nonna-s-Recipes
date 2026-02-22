@@ -57,6 +57,7 @@ export async function createTestRecipe({
   story,
   storyteller,
   estimatedCreationDate: creationDate,
+  languageDetected: "English",
 };
 
   const id = await createRecipe(payload);

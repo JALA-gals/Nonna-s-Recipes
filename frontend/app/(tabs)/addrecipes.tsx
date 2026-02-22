@@ -10,6 +10,7 @@ import {
   Dimensions,
   Alert,
 } from 'react-native';
+import * as ImageManipulator from 'expo-image-manipulator';
 import {getStorage, ref, uploadBytes, getDownloadURL} from 'firebase/storage';
 import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -49,25 +50,46 @@ export default function AddRecipePage() {
       setPhoto(result.assets[0].uri);
     }
   };
-  async function uploadImageAsync(uri: string) {
-  try {
-    console.log("Uploading image from:", uri);
-
-    const response = await fetch(uri);
-    const blob = await response.blob();
-
-    const storage = getStorage();
-    const storageRef = ref(storage, `recipePhotos/${Date.now()}.jpg`);
-
-    await uploadBytes(storageRef, blob);
-    const downloadUrl = await getDownloadURL(storageRef);
-
-    return downloadUrl;
-  } catch (err: any) {
-    console.log("UPLOAD ERROR:", err);
-    throw err;
+  //convert image
+  async function convertToJpeg(uri: string) {
+    const result = await ImageManipulator.manipulateAsync(
+      uri,
+      [],
+      { compress: 0.9, format: ImageManipulator.SaveFormat.JPEG }
+    );
+    return result.uri;
   }
-}
+
+  // Image upload helper
+  async function uploadImageAsync(uri: string) {
+    try {
+      console.log("Uploading image from:", uri);
+
+      const jpegUri = await convertToJpeg(uri);
+
+      const blob: Blob = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.onload = () => resolve(xhr.response);
+        xhr.onerror = () => reject(new TypeError("Network request failed"));
+        xhr.responseType = "blob";
+        xhr.open("GET", jpegUri, true);
+        xhr.send(null);
+      });
+
+      const storage = getStorage();
+      const storageRef = ref(storage, `recipePhotos/${Date.now()}.jpg`);
+
+      await uploadBytes(storageRef, blob);
+
+
+      const downloadUrl = await getDownloadURL(storageRef);
+
+      return downloadUrl;
+    } catch (err: any) {
+      console.log("UPLOAD ERROR FULL:", err);
+      throw err;
+    }
+  }
 
 
   // saving to the database
