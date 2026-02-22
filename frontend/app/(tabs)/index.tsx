@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
+import * as ImagePicker from "expo-image-picker";
 import {
   View,
   Text,
@@ -9,15 +10,26 @@ import {
   Image,
 } from "react-native";
 import { useRouter } from "expo-router";
+import SettingsModal from "@/components/settings-modal";
 
 const { width } = Dimensions.get("window");
 
 export default function HomeScreen() {
   const router = useRouter();
+  const [showSettings, setShowSettings] = useState(false);
+  const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
 
-  const handleTabClick = (tab: string) => {
-    console.log("Navigate to:", tab);
-  };
+  async function handleChangePhoto() {
+  const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+  if (!perm.granted) return;
+
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ImagePicker.MediaTypeOptions.Images,
+    quality: 1,
+  });
+
+  if (!result.canceled) setProfilePhotoUrl(result.assets[0].uri);
+}
 
   const handleRecipeClick = (recipeName: string) => {
     console.log("Navigate to recipe:", recipeName);
@@ -30,20 +42,28 @@ export default function HomeScreen() {
   return (
     <View style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-
         {/* WHITE HEADER BLOCK */}
         <View style={styles.headerBlock}>
           <View style={styles.header}>
             <Text style={styles.title}>Welcome Back Lilly!</Text>
-            <View style={styles.profileCircle}>
-              <Text style={styles.profileText}>User</Text>
-            </View>
+
+            <TouchableOpacity onPress={() => setShowSettings(true)}>
+              {profilePhotoUrl ? (
+                <Image
+                  source={{ uri: profilePhotoUrl }}
+                  style={styles.profileCircleImage}
+                />
+              ) : (
+                <View style={styles.profileCircle}>
+                  <Text style={styles.profileText}>User</Text>
+                </View>
+              )}
+            </TouchableOpacity>
           </View>
         </View>
 
         {/* REST OF CONTENT */}
         <View style={styles.contentContainer}>
-
           {/* CULINARY WORLD */}
           <Text style={styles.sectionTitle}>Your Culinary World</Text>
           <View style={styles.worldWrapper}>
@@ -57,33 +77,41 @@ export default function HomeScreen() {
           </View>
 
           {/* RECIPES */}
-          <Text style={[styles.sectionTitle, styles.recipeSectionTitle]}>Your Recipes</Text>
-          <View style={styles.recipeWrapper}>
-            <View style={styles.recipeSection}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                {[
-                  { name: "Baba's Baozi", location: "Beijing, China" },
-                  { name: "Mama's Noodles", location: "Guandong, China" },
-                  { name: "Sample Recipe", location: "Location, Country" },
-                ].map((recipe) => (
-                  <TouchableOpacity
-                    key={recipe.name}
-                    style={styles.recipeCard}
-                    onPress={() => handleRecipeClick(recipe.name)}
-                  >
-                    <Text style={styles.recipeTitle}>{recipe.name}</Text>
-                    <Text style={styles.recipeLocation}>{recipe.location}</Text>
-                    <View style={styles.recipeImage}>
-                      <Text style={styles.placeholderText}>Recipe Image</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          </View>
+          <Text style={[styles.sectionTitle, styles.recipeSectionTitle]}>
+            Your Recipes
+          </Text>
 
+          <View style={styles.recipeWrapper}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {[
+                { name: "Baba's Baozi", location: "Beijing, China" },
+                { name: "Mama's Noodles", location: "Guandong, China" },
+                { name: "Sample Recipe", location: "Location, Country" },
+              ].map((recipe) => (
+                <TouchableOpacity
+                  key={recipe.name}
+                  style={styles.recipeCard}
+                  onPress={() => handleRecipeClick(recipe.name)}
+                >
+                  <Text style={styles.recipeTitle}>{recipe.name}</Text>
+                  <Text style={styles.recipeLocation}>{recipe.location}</Text>
+
+                  <View style={styles.recipeImage}>
+                    <Text style={styles.placeholderText}>Recipe Image</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
         </View>
       </ScrollView>
+
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        profilePhotoUrl={profilePhotoUrl}
+        onPressChangePhoto={handleChangePhoto}
+      />
     </View>
   );
 }
@@ -93,8 +121,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: "#fff9d5",
   },
+  profileCircleImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
 
-  // ── White header ─────────────────────────────────────────────────
   headerBlock: {
     backgroundColor: "#FFFEFA",
     borderBottomLeftRadius: 50,
@@ -104,13 +136,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
 
-  // ── Content ──────────────────────────────────────────────────────
   contentContainer: {
     flex: 1,
     paddingHorizontal: 20,
   },
 
-  // ── Header ──────────────────────────────────────────────────────
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -138,7 +168,6 @@ const styles = StyleSheet.create({
     color: "#666",
   },
 
-  // ── Section Titles ──────────────────────────────────────────────
   sectionTitle: {
     fontSize: 22,
     color: "#7b3306",
@@ -151,7 +180,6 @@ const styles = StyleSheet.create({
     marginTop: 30,
   },
 
-  // ── Culinary World ──────────────────────────────────────────────
   worldWrapper: {
     backgroundColor: "#F9E9DC",
     padding: 16,
@@ -174,7 +202,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
 
-  // ── Recipes ─────────────────────────────────────────────────────
   recipeWrapper: {
     backgroundColor: "#FFBD9C",
     borderRadius: 20,
@@ -186,8 +213,6 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 5,
   },
-
-  recipeSection: {},
 
   recipeCard: {
     width: width * 0.5,

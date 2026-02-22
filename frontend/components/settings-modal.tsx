@@ -21,7 +21,7 @@ type SettingsModalProps = {
   // optional data props (so this can be dynamic later)
   name?: string;
   email?: string;
-  profilePhotoUrl?: string;
+  profilePhotoUrl?: string|null;
   recipesCount?: number;
   countriesCount?: number;
 
@@ -144,8 +144,10 @@ export default function SettingsModal({
             <View style={styles.profileSection}>
               <View style={styles.avatarWrap}>
                 <View style={styles.avatarRing}>
-                  <Image source={ProfileImage} style={styles.avatarImg} />
-                </View>
+                <Image
+                  source={profilePhotoUrl ? { uri: profilePhotoUrl } : ProfileImage}
+                  style={styles.avatarImg}
+                />                </View>
 
                 <Pressable
                   onPress={onPressChangePhoto}
