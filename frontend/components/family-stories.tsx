@@ -4,8 +4,9 @@ export interface FamilyStory {
   id: string;
   title: string;
   familyName: string;
+  recipeName: string;
   locationText?: string;
-  imageUrl?: string;
+  imageUrl: string;
   likeCount?: number;
   generations?: number;
 }

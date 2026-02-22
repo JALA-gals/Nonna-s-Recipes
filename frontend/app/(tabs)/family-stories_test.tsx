@@ -1,29 +1,34 @@
 import React from "react";
+import {useEffect, useState} from "react";
+import {subscribeToRecipes} from "../../src/services/recipes";
 import { View, Text, FlatList, StyleSheet, useWindowDimensions, Alert } from "react-native";
 import { FamilyStoryCard, type FamilyStory } from "../../components/family-stories";
-
-const mockStories: FamilyStory[] = [
-  {
-    id: "1",
-    title: "Abuela's Street Tacos",
-    familyName: "Rodriguez Family",
-    locationText: "Mexico City, Mexico",
-    imageUrl: "https://images.unsplash.com/photo-1552332386-f8dd00dc2f85?auto=format&fit=crop&w=1200&q=60",
-    likeCount: 234,
-    generations: 5,
-  },
-  {
-    id: "2",
-    title: "Nonna's Pizza Margherita",
-    familyName: "Ricci Family",
-    locationText: "Naples, Italy",
-    imageUrl: "https://images.unsplash.com/photo-1548365328-8b849e6f0b1a?auto=format&fit=crop&w=1200&q=60",
-    likeCount: 567,
-    generations: 4,
-  },
-];
+import type { RecipeDoc } from "../../src/services/recipes";
+import RecipeDetail from "@/components/RecipeDetailRN";
 
 export default function TestingFamilyStories() {
+  const [stories, setStories] = useState<FamilyStory[]>([]);
+  const [showDetail, setShowDetail] = useState(false);
+const [selectedRecipe, setSelectedRecipe] = useState<FamilyStory | null>(null);  useEffect(() => {
+  const unsub = subscribeToRecipes((rows) => {
+    const mapped: FamilyStory[] = rows.map((recipe: RecipeDoc & { id: string }) => ({
+      id: recipe.id,
+      title: recipe.title,
+      recipeName: recipe.title,
+      familyName: recipe.storyteller || "Unknown Family",
+      locationText: `${recipe.origin.name}, ${recipe.origin.countryCode}`,
+      imageUrl: recipe.photoUrl || "https://placehold.co/600x400",
+      likeCount: 0,
+      generations: 1,
+    }));
+
+    setStories(mapped);
+  });
+
+  return () => unsub();
+}, []);
+
+
   const { width } = useWindowDimensions();
   const numColumns = width >= 900 ? 3 : 2;
 
@@ -36,7 +41,7 @@ export default function TestingFamilyStories() {
       <Text style={styles.header}>Family Stories (Test)</Text>
 
       <FlatList
-        data={mockStories}
+        data={stories}
         key={numColumns}
         numColumns={numColumns}
         keyExtractor={(item) => item.id}
@@ -47,11 +52,21 @@ export default function TestingFamilyStories() {
           <View style={{ width: cardWidth }}>
             <FamilyStoryCard
               story={item}
-              onPress={(id) => Alert.alert("Pressed", id)}
+              onPress={(id) => {
+                setSelectedRecipe(stories.find(s => s.id === id) || null);
+                setShowDetail(true);
+              }}
             />
           </View>
         )}
       />
+      {selectedRecipe && (
+        <RecipeDetail
+          visible={showDetail}                  
+          onClose={() => setShowDetail(false)}
+          recipe={selectedRecipe}
+        />
+      )}
     </View>
   );
 }

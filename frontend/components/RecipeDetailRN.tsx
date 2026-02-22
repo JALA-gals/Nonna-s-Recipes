@@ -58,9 +58,9 @@ export interface RecipeData {
   difficulty?: string;
   */
   // Content
-  ingredients: string[];
-  instructions: InstructionStep[];
-  familyStory: string;
+  ingredients?: string[];
+  instructions?: InstructionStep[];
+  familyStory?: string;
 }
 
 export interface InstructionStep {
@@ -252,36 +252,43 @@ export default function RecipeDetail({
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Ingredients</Text>
             <View style={styles.contentCard}>
-              {recipe.ingredients.map((ingredient, index) => (
-                <Text key={index} style={styles.listItem}>
-                  • {ingredient}
-                </Text>
-              ))}
+              {recipe.ingredients?.length ? (
+              recipe.ingredients.map((ingredient, index) => (
+              <Text key={index} style={styles.listItem}>
+                • {ingredient}
+              </Text>
+              ))
+            ) : (
+              <Text style={styles.placeholderText}>No ingredients available</Text>
+        )}
             </View>
           </View>
 
           {/* Instructions Section */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Instructions</Text>
-            <View style={styles.contentCard}>
-              {recipe.instructions.map((step) => (
+          <Text style={styles.sectionTitle}>Instructions</Text>
+          <View style={styles.contentCard}>
+            {Array.isArray(recipe.instructions) && recipe.instructions.length > 0 ? (
+              recipe.instructions.map((step) => (
                 <View key={step.stepNumber} style={styles.stepContainer}>
-                  <Text style={styles.stepTitle}>
-                    Step {step.stepNumber}:
-                  </Text>
-                  <Text style={styles.stepDescription}>
-                    {step.description}
-                  </Text>
+                   <Text style={styles.stepTitle}>Step {step.stepNumber}:</Text>
+                  <Text style={styles.stepDescription}>{step.description}</Text>
                 </View>
-              ))}
-            </View>
-          </View>
+        ))
+      ) : (
+        <Text style={styles.placeholderText}>No instructions available</Text>
+      )}
+    </View>
+  </View>
 
           {/* Family Story Section */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Family Story</Text>
             <View style={styles.storyCard}>
-              <Text style={styles.storyText}>{recipe.familyStory}</Text>
+             <Text style={styles.storyText}>
+                {recipe.familyStory || "No family story available"}
+              </Text>
+
             </View>
           </View>
 
