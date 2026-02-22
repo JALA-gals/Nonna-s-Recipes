@@ -13,9 +13,12 @@ import { Ionicons } from '@expo/vector-icons';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
+import * as DocumentPicker from 'expo-document-picker';
+import * as FileSystem from 'expo-file-system';
 
 import { startRecording, stopRecording } from '../src/services/audio';
 import { transcribeAudio } from '../src/services/whisper';
+import { structureRecipe } from '../src/services/gemini';
 
 const { width } = Dimensions.get('window');
 
@@ -35,25 +38,30 @@ export default function TranscriptionPage() {
   const [fullTranscript, setFullTranscript] = React.useState('');
   const [hasRecorded, setHasRecorded] = React.useState(false);
 
-  const [expandedQuestions, setExpandedQuestions] = React.useState<Set<number>>(new Set([0]));
-
-  const toggleQuestion = (index: number) => {
-    const newExpanded = new Set(expandedQuestions);
-    if (newExpanded.has(index)) {
-      newExpanded.delete(index);
-    } else {
-      newExpanded.add(index);
-    }
-    setExpandedQuestions(newExpanded);
-  };
-
   async function handleRecordPress() {
-    // Prevent multiple recordings
+    // 1. FINALIZED STATE: If checkmark is visible, process with Gemini
     if (hasRecorded && !isRecording) {
-      Alert.alert("Limit Reached", "You can only record once. Please edit the text manually if you need to make changes.");
+      try {
+        setStatus('AI is organizing your recipe...');
+        
+        const structuredJSON = await structureRecipe(fullTranscript);
+        
+        router.replace({
+          pathname: '/(tabs)/addrecipes',
+          params: { 
+            recipeData: JSON.stringify(structuredJSON),
+            autoFill: 'true' 
+        }
+});
+      } catch (e) {
+        console.error(e);
+        setStatus('AI failed. Copy manually.');
+        Alert.alert("Error", "AI structuring failed. You can still copy text manually.");
+      }
       return;
     }
 
+    // 2. RECORDING STATE: Handle Stop
     if (isRecording) {
       try {
         const uri = await stopRecording();
@@ -65,16 +73,18 @@ export default function TranscriptionPage() {
 
         setStatus('Transcribing...');
         const transcript = await transcribeAudio(uri);
-        
+
         setFullTranscript(transcript);
-        setHasRecorded(true); // Lock the recording feature
+        setHasRecorded(true);
         setStatus('Transcription complete!');
       } catch (e) {
         setIsRecording(false);
         setStatus('Error processing audio');
         console.error(e);
       }
-    } else {
+    } 
+    // 3. IDLE STATE: Handle Start
+    else {
       setIsRecording(true);
       setStatus('Recording...');
       await startRecording();
@@ -93,32 +103,80 @@ export default function TranscriptionPage() {
       "This will delete your current transcript. Continue?",
       [
         { text: "Cancel", style: "cancel" },
-        { text: "Delete", style: "destructive", onPress: () => {
-          setFullTranscript('');
-          setHasRecorded(false);
-          setStatus('');
-        }}
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: () => {
+            setFullTranscript('');
+            setHasRecorded(false);
+            setStatus('');
+          },
+        },
       ]
     );
   };
 
+  async function handleUpload() {
+    if (hasRecorded) {
+      Alert.alert("Limit Reached", "Please redo the current transcription if you want to upload a new file.");
+      return;
+    }
+
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: 'audio/*',
+        copyToCacheDirectory: true,
+      });
+
+      if (result.canceled) return;
+
+      const file = result.assets[0];
+      const extension = file.name.split('.').pop() || 'm4a';
+      const fileName = `upload_${Date.now()}.${extension}`;
+      const permanentUri = FileSystem.documentDirectory + fileName;
+
+      setStatus('Uploading file...');
+      await FileSystem.copyAsync({
+        from: file.uri,
+        to: permanentUri,
+      });
+
+      setStatus('Transcribing upload...');
+      const transcript = await transcribeAudio(permanentUri);
+
+      setFullTranscript(transcript);
+      setHasRecorded(true);
+      setStatus('Upload complete!');
+    } catch (e) {
+      setStatus('Upload failed');
+      console.error(e);
+      Alert.alert("Error", "Could not process the selected audio file.");
+    }
+  }
+
   return (
     <View style={styles.fullScreenWrapper}>
       <View style={styles.modalContainer}>
-        {/* Header*/}
+        {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => router.back()}
+          >
             <Ionicons name="close" size={24} color="#7b3306" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Transcribe Recipe</Text>
+          <Text style={styles.headerTitle}>Tell Your Story</Text>
           <TouchableOpacity onPress={handleCopy} disabled={!fullTranscript}>
-            <Ionicons name="copy-outline" size={24} color={fullTranscript ? "#7b3306" : "#ccc"} />
+            <Ionicons
+              name="copy-outline"
+              size={24}
+              color={fullTranscript ? '#7b3306' : '#ccc'}
+            />
           </TouchableOpacity>
         </View>
 
         {status ? <Text style={styles.status}>{status}</Text> : null}
 
-        {/* Scrollable Content*/}
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -141,25 +199,9 @@ export default function TranscriptionPage() {
                       {index + 1}. {question}
                     </Text>
                   </View>
-
-                  {expandedQuestions.has(index) && (
-                    <View style={styles.answerContainer}>
-                      <Text style={styles.guideSubText}>Use these prompts to guide your story...</Text>
-                      <TouchableOpacity onPress={() => toggleQuestion(index)}>
-                        <Text style={styles.toggleText}>Collapse ↑</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-
-                  {!expandedQuestions.has(index) && (
-                    <TouchableOpacity onPress={() => toggleQuestion(index)}>
-                      <Text style={styles.toggleText}>Show Prompts ↓</Text>
-                    </TouchableOpacity>
-                  )}
                 </View>
               ))}
 
-              {/* Functional Transcript Input*/}
               <View style={styles.functionalArea}>
                 <View style={styles.cardHeader}>
                   <Text style={styles.label}>Your Transcription</Text>
@@ -183,7 +225,6 @@ export default function TranscriptionPage() {
           </View>
         </ScrollView>
 
-        {/* Recording Indicator*/}
         {isRecording && (
           <View style={styles.recordingIndicator}>
             <Text style={styles.recordingText}>Recording your recipe story...</Text>
@@ -202,9 +243,8 @@ export default function TranscriptionPage() {
           </View>
         )}
 
-        {/* Bottom Controls*/}
         <View style={styles.bottomControls}>
-          <TouchableOpacity style={styles.controlButton}>
+          <TouchableOpacity style={styles.controlButton} onPress={handleUpload}>
             <Ionicons name="attach" size={24} color="#7b3306" />
           </TouchableOpacity>
 
@@ -212,14 +252,14 @@ export default function TranscriptionPage() {
             style={[
               styles.recordButton,
               isRecording && styles.recordButtonActive,
-              hasRecorded && !isRecording && styles.recordButtonDisabled
+              hasRecorded && !isRecording && styles.recordButtonDisabled,
             ]}
             onPress={handleRecordPress}
           >
             {isRecording ? (
               <Ionicons name="stop" size={28} color="#f77777" />
             ) : hasRecorded ? (
-                <Ionicons name="checkmark-circle" size={32} color="white" />
+              <Ionicons name="checkmark-circle" size={32} color="white" />
             ) : (
               <Svg width={32} height={32} viewBox="0 0 32 32">
                 <Rect x="10" y="6" width="12" height="16" rx="6" stroke="white" strokeWidth="2.67" />
@@ -229,7 +269,10 @@ export default function TranscriptionPage() {
             )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.controlButton} onPress={() => router.back()}>
+          <TouchableOpacity
+            style={styles.controlButton}
+            onPress={() => router.back()}
+          >
             <Ionicons name="download-outline" size={24} color="#7b3306" />
           </TouchableOpacity>
         </View>
@@ -251,18 +294,30 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     backgroundColor: '#ffffff',
-    width: 40, height: 40, borderRadius: 12,
-    alignItems: 'center', justifyContent: 'center',
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
     elevation: 4,
   },
   headerTitle: { fontSize: 22, color: '#7b3306', fontWeight: '600' },
-  status: { fontSize: 14, color: '#ce7943', textAlign: 'center', fontWeight: 'bold', marginBottom: 8 },
+  status: {
+    fontSize: 14,
+    color: '#ce7943',
+    textAlign: 'center',
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
   scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: 16, paddingBottom: 180 },
   contentCard: { position: 'relative', minHeight: 650 },
   beigeBackground: {
     position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: '#EBDCBF',
     borderRadius: 24,
     opacity: 0.5,
@@ -272,19 +327,27 @@ const styles = StyleSheet.create({
   questionRow: { position: 'relative', marginBottom: 8 },
   questionHighlight: {
     position: 'absolute',
-    top: 10, left: 0, height: 14,
+    top: 10,
+    left: 0,
+    height: 14,
     backgroundColor: '#FFCC7F',
     opacity: 0.6,
   },
   questionText: { fontSize: 17, color: '#7b3306', fontWeight: '500' },
-  answerContainer: { marginTop: 10 },
-  guideSubText: { fontSize: 13, color: 'rgba(123,51,6,0.6)', fontStyle: 'italic' },
-  
   functionalArea: { marginTop: 20 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
-  label: { fontSize: 12, fontWeight: '700', color: '#7b3306', opacity: 0.5, textTransform: 'uppercase' },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  label: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#7b3306',
+    opacity: 0.5,
+    textTransform: 'uppercase',
+  },
   redoText: { fontSize: 12, color: '#f77777', fontWeight: '700' },
-  
   answerInput: {
     fontSize: 16,
     color: '#7b3306',
@@ -293,40 +356,56 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255,255,255,0.4)',
     borderRadius: 16,
   },
-  toggleText: { fontSize: 12, color: '#ce7943', marginTop: 6 },
   recordingIndicator: {
     position: 'absolute',
-    bottom: 110, left: 20, right: 20,
+    bottom: 110,
+    left: 20,
+    right: 20,
     backgroundColor: '#fffdf9',
-    borderRadius: 20, padding: 16,
-    alignItems: 'center', elevation: 8,
+    borderRadius: 20,
+    padding: 16,
+    alignItems: 'center',
+    elevation: 8,
   },
   recordingText: { fontSize: 14, color: '#7b3306' },
   recordingTime: { fontSize: 12, color: '#f77777', fontWeight: '700' },
-  waveform: { flexDirection: 'row', alignItems: 'flex-end', height: 30, gap: 3, marginTop: 8 },
+  waveform: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    height: 30,
+    gap: 3,
+    marginTop: 8,
+  },
   waveformBar: { width: 4, backgroundColor: '#f77777', borderRadius: 2 },
   bottomControls: {
     position: 'absolute',
-    bottom: 30, left: 20, right: 20,
+    bottom: 30,
+    left: 20,
+    right: 20,
     backgroundColor: '#fffdf9',
     borderRadius: 40,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 25, paddingVertical: 15,
+    paddingHorizontal: 25,
+    paddingVertical: 15,
     elevation: 10,
   },
   controlButton: { padding: 5 },
   recordButton: {
-    width: 65, height: 65, borderRadius: 35,
+    width: 65,
+    height: 65,
+    borderRadius: 35,
     backgroundColor: '#f77777',
-    alignItems: 'center', justifyContent: 'center',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   recordButtonActive: {
     backgroundColor: '#ffffff',
-    borderWidth: 4, borderColor: '#7b3306',
+    borderWidth: 4,
+    borderColor: '#7b3306',
   },
   recordButtonDisabled: {
     backgroundColor: '#2ecc71',
-  }
+  },
 });
