@@ -1,106 +1,222 @@
-import React, { useState } from "react";
-import { View, Button, Alert, TextInput, StyleSheet, Text } from "react-native";
+import React from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Dimensions,
+  Image,
+} from "react-native";
+import { useRouter } from "expo-router";
 
-// IMPORTANT: use relative imports to avoid alias issues
-import { createRecipe } from "../../src/services/recipes";
-import { auth } from "../../src/lib/firebase";
-import { geocodePlace } from "../../src/services/geocode";
-console.log("RUNNING FILE: frontend/app/(tabs)/index.tsx — HOME V999");
-export default function Home() {
-  const [title, setTitle] = useState("Monster Energy Drink");
-  const [place, setPlace] = useState("Kingston");
-  const [countryCode, setCountryCode] = useState("JM");
+const { width } = Dimensions.get("window");
 
-  const addTestRecipe = async () => {
-    const uid = auth.currentUser?.uid;
-    if (!uid) {
-      Alert.alert("Not logged in", "Log in first, then try again.");
-      return;
-    }
+export default function HomeScreen() {
+  const router = useRouter();
 
-    const cleanTitle = title.trim();
-    const cleanPlace = place.trim();
-    const cc = countryCode.trim().toUpperCase();
+  const handleTabClick = (tab: string) => {
+    console.log("Navigate to:", tab);
+  };
 
-    let coords: { lat: number; lng: number } | null = null;
-    try {
-      coords = await geocodePlace(cleanPlace, cc);
-    } catch (e) {
-      console.log("GEOCODE ERROR:", e);
-    }
+  const handleRecipeClick = (recipeName: string) => {
+    console.log("Navigate to recipe:", recipeName);
+  };
 
-    // ✅ Schema write test (no helper)
-    const payload = {
-      title: cleanTitle || "Untitled Recipe",
-      createdBy: uid,
-      visibility: "public" as const,
-      origin: {
-        name: cleanPlace,
-        countryCode: cc,
-        lat: coords?.lat ?? null,
-        lng: coords?.lng ?? null,
-      },
-
-      // New schema fields
-      description: "A refreshing and energizing family drink.",
-      region: "Americas" as const,
-      tags: ["Caribbean", "family favorite"],
-      ingredients: [
-        { item: "Energy drink", amount: "1 can", preparation: "", note: "" },
-        { item: "Ice cubes", amount: "1 cup", preparation: "", note: "" },
-      ],
-      steps: [
-        { step: 1, instruction: "Pour drink over ice.", tip: "", note: "" },
-        { step: 2, instruction: "Serve immediately.", tip: "", note: "" },
-      ],
-      story: "We used to drink this during hot summer afternoons.",
-      storyteller: "Dad",
-      languageDetected: "English",
-    };
-
-    try {
-      const id = await createRecipe(payload);
-      console.log("WRITE SUCCESS. DOC ID:", id);
-
-      Alert.alert(
-        coords ? "Created recipe + pinned!" : "Created recipe (no pin)",
-        coords
-          ? `Pinned at ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)}`
-          : "Couldn’t find coordinates."
-      );
-    } catch (e) {
-      console.log("WRITE FAILED ERROR:", e);
-      Alert.alert("Save failed", "Check logs for details.");
-    }
+  const handleMapClick = () => {
+    router.push("/(tabs)/map");
   };
 
   return (
-    <View style={{ padding: 20, gap: 12 }}>
-      <Text style={styles.label}>Recipe title</Text>
-      <TextInput value={title} onChangeText={setTitle} style={styles.input} />
+    <View style={styles.container}>
+      <ScrollView showsVerticalScrollIndicator={false}>
 
-      <Text style={styles.label}>Place (city/region)</Text>
-      <TextInput value={place} onChangeText={setPlace} style={styles.input} />
+        {/* WHITE HEADER BLOCK */}
+        <View style={styles.headerBlock}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Welcome Back Lilly!</Text>
+            <View style={styles.profileCircle}>
+              <Text style={styles.profileText}>User</Text>
+            </View>
+          </View>
+        </View>
 
-      <Text style={styles.label}>Country code (2 letters)</Text>
-      <TextInput
-        value={countryCode}
-        onChangeText={setCountryCode}
-        style={styles.input}
-        autoCapitalize="characters"
-      />
+        {/* REST OF CONTENT */}
+        <View style={styles.contentContainer}>
 
-      <Button title="Add Test Recipe" onPress={addTestRecipe} />
+          {/* CULINARY WORLD */}
+          <Text style={styles.sectionTitle}>Your Culinary World</Text>
+          <View style={styles.worldWrapper}>
+            <TouchableOpacity style={styles.worldCard} onPress={handleMapClick}>
+              <Image
+                source={require("../../assets/images/map-preview.png")}
+                style={styles.mapPlaceholder}
+                resizeMode="cover"
+              />
+            </TouchableOpacity>
+          </View>
+
+          {/* RECIPES */}
+          <Text style={[styles.sectionTitle, styles.recipeSectionTitle]}>Your Recipes</Text>
+          <View style={styles.recipeWrapper}>
+            <View style={styles.recipeSection}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                {[
+                  { name: "Baba's Baozi", location: "Beijing, China" },
+                  { name: "Mama's Noodles", location: "Guandong, China" },
+                  { name: "Sample Recipe", location: "Location, Country" },
+                ].map((recipe) => (
+                  <TouchableOpacity
+                    key={recipe.name}
+                    style={styles.recipeCard}
+                    onPress={() => handleRecipeClick(recipe.name)}
+                  >
+                    <Text style={styles.recipeTitle}>{recipe.name}</Text>
+                    <Text style={styles.recipeLocation}>{recipe.location}</Text>
+                    <View style={styles.recipeImage}>
+                      <Text style={styles.placeholderText}>Recipe Image</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          </View>
+
+        </View>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  label: { fontWeight: "600" },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    padding: 10,
+  container: {
+    flex: 1,
+    backgroundColor: "#fff9d5",
+  },
+
+  // ── White header ─────────────────────────────────────────────────
+  headerBlock: {
+    backgroundColor: "#FFFEFA",
+    borderBottomLeftRadius: 50,
+    borderBottomRightRadius: 50,
+    paddingTop: 90,
+    paddingBottom: 30,
+    paddingHorizontal: 20,
+  },
+
+  // ── Content ──────────────────────────────────────────────────────
+  contentContainer: {
+    flex: 1,
+    paddingHorizontal: 20,
+  },
+
+  // ── Header ──────────────────────────────────────────────────────
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  title: {
+    fontSize: 28,
+    color: "#7b3306",
+    fontWeight: "600",
+    flex: 1,
+  },
+
+  profileCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "#d9d9d9",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  profileText: {
+    fontSize: 10,
+    color: "#666",
+  },
+
+  // ── Section Titles ──────────────────────────────────────────────
+  sectionTitle: {
+    fontSize: 22,
+    color: "#7b3306",
+    fontWeight: "600",
+    marginTop: 40,
+    marginBottom: 10,
+  },
+
+  recipeSectionTitle: {
+    marginTop: 30,
+  },
+
+  // ── Culinary World ──────────────────────────────────────────────
+  worldWrapper: {
+    backgroundColor: "#F9E9DC",
+    padding: 16,
+    borderRadius: 16,
+  },
+
+  worldCard: {
+    borderRadius: 12,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+
+  mapPlaceholder: {
+    height: 170,
+    width: "100%",
+    borderRadius: 12,
+  },
+
+  // ── Recipes ─────────────────────────────────────────────────────
+  recipeWrapper: {
+    backgroundColor: "#FFBD9C",
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 30,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+
+  recipeSection: {},
+
+  recipeCard: {
+    width: width * 0.5,
+    marginRight: 15,
+  },
+
+  recipeTitle: {
+    fontSize: 14,
+    color: "#7b3306",
+    marginTop: 10,
+  },
+
+  recipeLocation: {
+    fontSize: 12,
+    color: "#7b3306",
+    opacity: 0.7,
+  },
+
+  recipeImage: {
+    height: 112,
+    backgroundColor: "#fff2eb",
     borderRadius: 6,
+    marginTop: 8,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  placeholderText: {
+    fontSize: 12,
+    color: "#cfb29c",
   },
 });

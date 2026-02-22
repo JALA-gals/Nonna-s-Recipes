@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, Button, Alert } from "react-native";
 import { seedDummyRecipes } from "../../src/services/seedRecipes";
-
+console.log("seedDummyRecipes value:", seedDummyRecipes);
 export default function SettingsTest() {
   const [loading, setLoading] = useState(false);
 
