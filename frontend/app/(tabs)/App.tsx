@@ -50,9 +50,9 @@ export default function App() {
       location: "Mexico City, Mexico",
       generations: 5,
       likes: 234,
-     // image: require("./assets/tacos.png"),
-      overlayColor: "rgba(255,214,168,0.6)"//,
-     // titleFont: "josefin",
+      //image: require("./assets/tacos.png"),
+      overlayColor: "rgba(255,214,168,0.6)",
+      titleFont: "josefin",
     },
     {
       title: "Nonna's Pizza Margherita",
@@ -60,9 +60,9 @@ export default function App() {
       location: "Naples, Italy",
       generations: 4,
       likes: 567,
-   //   image: require("./assets/pizza.png"),
-      overlayColor: "rgba(255,204,211,0.6)"//,
-     // titleFont: "josefin",
+     // image: require("./assets/pizza.png"),
+      overlayColor: "rgba(255,204,211,0.6)",
+      titleFont: "josefin",
     },
     // add others the same way
   ];
