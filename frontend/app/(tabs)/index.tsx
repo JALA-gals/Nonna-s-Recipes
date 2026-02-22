@@ -9,6 +9,7 @@ import {
   Image,
   ActivityIndicator,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
@@ -30,6 +31,12 @@ export default function HomeScreen() {
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [userName, setUserName] = useState("Back");
+  const [showSettings, setShowSettings] = useState(false);
+const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
+  async function handleChangePhoto() {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) return;
+  }
 
   useEffect(() => {
     // Listen for auth state, then fetch that user's recipes
@@ -156,7 +163,7 @@ export default function HomeScreen() {
 
         </View>
       </ScrollView>
-    </View>
+    
 
       <SettingsModal
         isOpen={showSettings}
