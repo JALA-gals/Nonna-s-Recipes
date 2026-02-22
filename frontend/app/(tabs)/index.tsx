@@ -48,18 +48,12 @@ export default function HomeScreen() {
           <View style={styles.header}>
             <Text style={styles.title}>Welcome Back Lilly!</Text>
 
-            <TouchableOpacity onPress={() => setShowSettings(true)}>
-              {profilePhotoUrl ? (
-                <Image
-                  source={{ uri: profilePhotoUrl }}
-                  style={styles.profileCircleImage}
-                />
-              ) : (
-                <View style={styles.profileCircle}>
-                  <Text style={styles.profileText}>User</Text>
-                </View>
-              )}
-            </TouchableOpacity>
+           <TouchableOpacity onPress={() => setShowSettings(true)}>
+            <Image
+              source={require("../../assets/images/profile.png")}
+              style={styles.profileCircleImage}
+            />
+          </TouchableOpacity>
           </View>
         </View>
 
@@ -130,6 +124,7 @@ const styles = StyleSheet.create({
 
   headerBlock: {
     backgroundColor: "#FFFEFA",
+    opacity: 0.70,
     borderBottomLeftRadius: 50,
     borderBottomRightRadius: 50,
     paddingTop: 90,
@@ -185,6 +180,10 @@ const styles = StyleSheet.create({
     backgroundColor: "#e6d3c3",
     padding: 16,
     borderRadius: 16,
+       shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
   },
 
   worldCard: {
@@ -207,7 +206,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#FFBD9C",
     borderRadius: 20,
     padding: 16,
-    marginBottom: 30,
+    marginBottom: 60,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
@@ -233,7 +232,7 @@ const styles = StyleSheet.create({
   },
 
   recipeImage: {
-    height: 112,
+    height: 160,
     backgroundColor: "#fff2eb",
     borderRadius: 6,
     marginTop: 8,
