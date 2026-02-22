@@ -1,3 +1,6 @@
+import { useFonts, GloriaHallelujah_400Regular } from "@expo-google-fonts/gloria-hallelujah";
+import * as SplashScreen from "expo-splash-screen";
+
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -21,7 +24,7 @@ import { auth } from "../src/lib/firebase";
 import { Colors } from "@/constants/theme";
 import { useGoogleAuth } from "../src/hooks/useGoogleAuth";
 import {LinearGradient} from "expo-linear-gradient";  
-import{useFonts, JosefinSans_400Regular, JosefinSans_500Medium, JosefinSans_600SemiBold} from "@expo-google-fonts/josefin-sans";
+// import{useFonts, JosefinSans_400Regular, JosefinSans_500Medium, JosefinSans_600SemiBold} from "@expo-google-fonts/josefin-sans";
 const light = Colors.light;
 const{width, height}= Dimensions.get("window");
 export default function LoginScreen() {
@@ -51,6 +54,16 @@ export default function LoginScreen() {
   useEffect(() => {
     if (errorMessage) Alert.alert("Google sign-in failed", errorMessage);
   }, [errorMessage]);
+
+  const [fontsLoaded] = useFonts({
+  GloriaHallelujah_400Regular,
+});
+
+useEffect(() => {
+  if (fontsLoaded) {
+    SplashScreen.hideAsync();
+  }
+}, [fontsLoaded]);
 
   const handleLogin = async () => {
     try {
@@ -202,17 +215,20 @@ const styles = StyleSheet.create({
   titleLine1: {
     fontSize: Math.min(width * 0.15, 58),
     color: '#7b3306',
-    lineHeight: Math.min(width * 0.15, 58) * 1.2,
+    lineHeight: Math.min(width * 0.15, 58) * 1.5,
+    fontFamily: 'GloriaHallelujah_400Regular', //  add this
   },
   titleLine2: {
     fontSize: Math.min(width * 0.165, 65),
     color: '#7b3306',
-    lineHeight: Math.min(width * 0.165, 65) * 1.2,
+    lineHeight: Math.min(width * 0.165, 65) * 1.5,
+    fontFamily: 'GloriaHallelujah_400Regular', // add this
   },
   subtitle: {
     fontSize: Math.min(width * 0.048, 19),
     color: 'rgba(151,60,0,0.8)',
-    marginTop: 12,
+    marginTop: 1,
+    fontFamily: 'GloriaHallelujah_400Regular'
   },
   formContainer: {
     width: '100%',
