@@ -13,6 +13,8 @@ import { useRouter } from "expo-router";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "@/src/lib/firebase";
+import SettingsModal from "@/components/settings-modal";
+import { LinearGradient } from "expo-linear-gradient";
 
 const { width } = Dimensions.get("window");
 
@@ -75,16 +77,20 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <LinearGradient colors={["#a1c5a8", "#fbf2cc"]} style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
 
         {/* WHITE HEADER BLOCK */}
         <View style={styles.headerBlock}>
           <View style={styles.header}>
-            <Text style={styles.title}>Welcome {userName}!</Text>
-            <TouchableOpacity style={styles.profileCircle} onPress={() => router.push("../components/settings-modal")}>
-              <Text style={styles.profileText}>User</Text>
-            </TouchableOpacity>
+            <Text style={styles.title}>Welcome Back Lilly!</Text>
+
+           <TouchableOpacity onPress={() => setShowSettings(true)}>
+            <Image
+              source={require("../../assets/images/profile.png")}
+              style={styles.profileCircleImage}
+            />
+          </TouchableOpacity>
           </View>
         </View>
 
@@ -151,14 +157,31 @@ export default function HomeScreen() {
         </View>
       </ScrollView>
     </View>
+
+      <SettingsModal
+        isOpen={showSettings}
+        onClose={() => setShowSettings(false)}
+        profilePhotoUrl={profilePhotoUrl}
+        onPressChangePhoto={handleChangePhoto}
+      />
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff9d5" },
+  container: {
+    flex: 1,
+    //backgroundColor: "#a0c5aa",
+  },
+  profileCircleImage: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+  },
 
   headerBlock: {
     backgroundColor: "#FFFEFA",
+    opacity: 0.70,
     borderBottomLeftRadius: 50,
     borderBottomRightRadius: 50,
     paddingTop: 90,
@@ -183,7 +206,15 @@ const styles = StyleSheet.create({
 
   recipeSectionTitle: { marginTop: 30 },
 
-  worldWrapper: { backgroundColor: "#F9E9DC", padding: 16, borderRadius: 16 },
+  worldWrapper: {
+    backgroundColor: "#e6d3c3",
+    padding: 16,
+    borderRadius: 16,
+       shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+  },
 
   worldCard: {
     borderRadius: 12, overflow: "hidden",
@@ -194,9 +225,15 @@ const styles = StyleSheet.create({
   mapPlaceholder: { height: 170, width: "100%", borderRadius: 12 },
 
   recipeWrapper: {
-    backgroundColor: "#FFBD9C", borderRadius: 20, padding: 16, marginBottom: 30,
-    shadowColor: "#000", shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15, shadowRadius: 6, elevation: 5,
+    backgroundColor: "#FFBD9C",
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 60,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 5,
   },
 
   recipeSection: {},
@@ -208,8 +245,12 @@ const styles = StyleSheet.create({
   recipeLocation: { fontSize: 12, color: "#7b3306", opacity: 0.7 },
 
   recipeImage: {
-    height: 112, backgroundColor: "#fff2eb", borderRadius: 6,
-    marginTop: 8, justifyContent: "center", alignItems: "center",
+    height: 160,
+    backgroundColor: "#fff2eb",
+    borderRadius: 6,
+    marginTop: 8,
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   placeholderText: { fontSize: 12, color: "#cfb29c" },
