@@ -91,7 +91,7 @@ const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
         {/* WHITE HEADER BLOCK */}
         <View style={styles.headerBlock}>
           <View style={styles.header}>
-            <Text style={styles.title}>Welcome Back Lilly!</Text>
+            <Text style={styles.title}>Welcome Back!</Text>
 
            <TouchableOpacity onPress={() => setShowSettings(true)}>
             <Image
