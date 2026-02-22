@@ -56,7 +56,7 @@ const recipesData: Recipe[] = [
   {
   id: "3",
   name: "Stir-fried Tomatoes and Scrambled Eggs",
-  image: "../../assets/images/tomato-egg-stock.png", // add a URL or local image path if available
+  image: "", // add a URL or local image path if available
   origin: "Family Kitchen",
   location: "China",
   family: "Zhang Family",
