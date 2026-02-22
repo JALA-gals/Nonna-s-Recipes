@@ -84,7 +84,7 @@ export default function LoginScreen() {
       >
         {/* Background Gradient */}
         <LinearGradient
-          colors={['#a1c5a8', '#fef9d4']}
+          colors={['#aad2b2', '#fef9d4']}
           style={styles.gradientBackground}
         />
 

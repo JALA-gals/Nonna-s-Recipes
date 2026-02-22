@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import SettingsModal from "@/components/settings-modal";
+import { LinearGradient } from "expo-linear-gradient";
 
 const { width } = Dimensions.get("window");
 
@@ -40,7 +41,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <LinearGradient colors={["#a1c5a8", "#fbf2cc"]} style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* WHITE HEADER BLOCK */}
         <View style={styles.headerBlock}>
@@ -112,14 +113,14 @@ export default function HomeScreen() {
         profilePhotoUrl={profilePhotoUrl}
         onPressChangePhoto={handleChangePhoto}
       />
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#fff9d5",
+    //backgroundColor: "#a0c5aa",
   },
   profileCircleImage: {
     width: 40,
@@ -181,7 +182,7 @@ const styles = StyleSheet.create({
   },
 
   worldWrapper: {
-    backgroundColor: "#F9E9DC",
+    backgroundColor: "#e6d3c3",
     padding: 16,
     borderRadius: 16,
   },
