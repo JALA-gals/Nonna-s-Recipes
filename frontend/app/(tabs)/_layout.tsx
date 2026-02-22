@@ -1,9 +1,10 @@
 import React from "react";
 import { Tabs } from "expo-router";
+import CustomTabBar from "../../components/CustomTabBar";
 
 export default function TabLayout() {
   return (
-    <Tabs screenOptions={{ headerShown: true }}>
+    <Tabs screenOptions={{ headerShown: false} } tabBar={(props)=><CustomTabBar{ ... props}/>}>
       <Tabs.Screen
         name="recording"
         options={{
@@ -17,7 +18,12 @@ export default function TabLayout() {
           title: "Add Recipe",
         }}
       />
-
+      <Tabs.Screen
+      name="testing"
+        options={{
+          title: "Testing",
+        }}
+      />
       {/* Optional: keep the starter explore tab if you want */}
       {/* <Tabs.Screen name="explore" options={{ title: "Explore" }} /> */}
     </Tabs>
