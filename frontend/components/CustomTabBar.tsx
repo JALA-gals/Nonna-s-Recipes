@@ -13,7 +13,7 @@ export default function CustomTabBar({ state, descriptors, navigation }: BottomT
         const isFocused = state.index === index;
 
         // Special center button
-        if (route.name === "index") {
+        if (route.name === "addrecipe") {
           return (
             <View key={route.key} style={{ flex: 1, alignItems: "center" }}>
               <TouchableOpacity

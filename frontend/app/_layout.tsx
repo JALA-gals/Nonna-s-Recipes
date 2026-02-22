@@ -17,7 +17,10 @@ export default function RootLayout() {
         <Stack.Screen name="register" options={{ headerShown: false }} />
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="(transcription)" options={{headerShown: false, presentation: 'modal'}} />
+        <Stack.Screen
+          name="transcription"
+          options={{ headerShown: false }}
+        />
       </Stack>
       <StatusBar style="auto" />
     </>
