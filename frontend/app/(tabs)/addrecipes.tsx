@@ -7,7 +7,6 @@ import {
   ScrollView,
   StyleSheet,
   Dimensions,
-  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,11 +17,8 @@ const { width } = Dimensions.get('window');
 export default function AddRecipePage() {
   const router = useRouter();
 
-  // Placeholder for your conversion logic
   const handleConvert = () => {
-    // Add your implementation here later
     console.log("Convert function triggered");
-    // Optional: Alert.alert("Coming Soon", "Conversion logic goes here!");
   };
 
   return (
@@ -34,7 +30,7 @@ export default function AddRecipePage() {
         style={styles.background}
       />
 
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
@@ -48,35 +44,27 @@ export default function AddRecipePage() {
           <View style={styles.headerSpacer} />
         </View>
 
-        {/* Input Methods */}
+        {/* Voice Input*/}
         <View style={styles.inputMethodsCard}>
-          <View style={styles.inputMethodsInner}>
-            <TouchableOpacity 
-              style={styles.voiceButton} 
-              onPress={() => router.push('/transcription')}
-            >
-              <Ionicons name="mic" size={32} color="#ffffff" />
-              <Text style={styles.buttonText}>Voice Input</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.textButton}>
-              <Ionicons name="text" size={32} color="#ffffff" />
-              <Text style={styles.buttonText}>Text Input</Text>
-            </TouchableOpacity>
-          </View>
+          <TouchableOpacity
+            style={styles.voiceButton}
+            onPress={() => router.push('/transcription')}
+          >
+            <Ionicons name="mic" size={40} color="#ffffff" />
+            <Text style={styles.buttonText}>Recipe Input</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Convert Recipe Button (Now calls a function) */}
+        {/* Convert Recipe Button */}
         <View style={styles.convertButtonContainer}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.convertButton}
-            onPress={handleConvert} 
+            onPress={handleConvert}
           >
             <Text style={styles.convertButtonText}>Convert Recipe</Text>
           </TouchableOpacity>
         </View>
 
-        
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Recipe Name</Text>
           <TextInput
@@ -135,30 +123,21 @@ const styles = StyleSheet.create({
   inputMethodsCard: {
     backgroundColor: '#fffdf9',
     borderRadius: 24,
-    padding: 20,
+    padding: 12,
     marginBottom: 24,
     elevation: 10,
+    alignItems: 'center',
   },
-  inputMethodsInner: { flexDirection: 'row', gap: 12 },
   voiceButton: {
-    flex: 1,
     backgroundColor: '#f77777',
     borderRadius: 24,
-    height: 100,
+    height: 120,
+    width: '60%',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
   },
-  textButton: {
-    flex: 1,
-    backgroundColor: '#63bddb',
-    borderRadius: 24,
-    height: 100,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  buttonText: { fontSize: 14, color: '#ffffff' },
+  buttonText: { fontSize: 16, color: '#ffffff', fontWeight: '600' },
   convertButtonContainer: { alignItems: 'center', marginBottom: 32 },
   convertButton: { backgroundColor: '#ffcc7f', borderRadius: 100, paddingHorizontal: 32, paddingVertical: 16 },
   convertButtonText: { fontSize: 20, color: '#7b3306' },
