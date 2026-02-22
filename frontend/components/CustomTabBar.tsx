@@ -55,8 +55,8 @@ function getIcon(name: string, focused:boolean) {
       return <Ionicons name="location-outline" size={24} color={color} style={{ opacity }} />;
     case "recording":
       return <Ionicons name="mic-outline" size={24} color={color} style={{ opacity }} />;
-    case "testing":
-      return <Ionicons name="flask-outline" size={24} color={color} style={{ opacity }} />;
+    case "App":
+      return <Ionicons name="compass-outline" size={24} color={color} style={{ opacity }} />;
   }
 }
 
