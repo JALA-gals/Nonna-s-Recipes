@@ -25,5 +25,5 @@ We plan to enhance user accessibility by implementing features such as screen re
 
 ## How to run our Software
 
-How to run, clone GitHub repo. CD into the frontend folder. Then:
+Clone the GitHub repo. CD into the frontend folder. Then:
 run [npm install], then run [npx expo start], instructions will appear to help guide you in running the app on your phone through the Expo app.
