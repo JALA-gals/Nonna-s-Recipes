@@ -18,8 +18,14 @@ export default function TabLayout() {
         }}
       />
 
-      {/* Optional: keep the starter explore tab if you want */}
-      {/* <Tabs.Screen name="explore" options={{ title: "Explore" }} /> */}
+       <Tabs.Screen
+        name="addrecipes"
+        options={{
+          title: "REAL Add Recipe",
+        }}
+      />
+
     </Tabs>
   );
 }
+
