@@ -1,6 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
 import MapView, { Marker, Callout, Region } from "react-native-maps";
+import { useRouter } from "expo-router";
+
 import {
   subscribeToRecipes,
   updateRecipeOriginCoords,
@@ -21,16 +23,17 @@ type Recipe = {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export default function MapScreen() {
+  const router = useRouter();
+  const mapRef = useRef<MapView | null>(null);
+
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Track which recipe IDs we've attempted to geocode this session
   const attempted = useRef<Set<string>>(new Set());
   const running = useRef(false);
 
   useEffect(() => {
     const unsub = subscribeToRecipes((rows) => {
-      console.log("MAP RECEIVED RECIPES:", rows.length);
       setRecipes(rows as Recipe[]);
       setLoading(false);
     });
@@ -55,6 +58,7 @@ export default function MapScreen() {
     });
   }, [recipes]);
 
+  // Auto-geocode missing coords
   useEffect(() => {
     if (running.current) return;
     if (missing.length === 0) return;
@@ -62,8 +66,6 @@ export default function MapScreen() {
     running.current = true;
 
     (async () => {
-      console.log("MISSING COORDS COUNT:", missing.length);
-
       for (const r of missing) {
         if (attempted.current.has(r.id)) continue;
         attempted.current.add(r.id);
@@ -71,23 +73,15 @@ export default function MapScreen() {
         const place = r.origin?.name?.trim() ?? "";
         const cc = r.origin?.countryCode?.trim().toUpperCase() ?? "";
 
-        console.log("AUTO-GEOCODING:", r.id, place, cc);
-
         try {
           const coords = await geocodePlace(place, cc);
-          console.log("AUTO-GEOCODE RESULT:", r.id, coords);
-
           if (coords) {
             await updateRecipeOriginCoords(r.id, coords.lat, coords.lng);
-            console.log("WROTE COORDS TO FIRESTORE:", r.id);
-          } else {
-            console.log("NO COORDS FOUND:", r.id, place, cc);
           }
         } catch (e) {
-          console.log("AUTO-GEOCODE / UPDATE ERROR:", r.id, e);
+          console.log("Geocode error:", e);
         }
 
-        // Nominatim rate-limit friendly: space out requests
         await sleep(900);
       }
 
@@ -95,23 +89,27 @@ export default function MapScreen() {
     })();
   }, [missing]);
 
-  const initialRegion: Region = useMemo(() => {
-    const first = pinned[0];
-    if (first?.origin?.lat && first?.origin?.lng) {
-      return {
-        latitude: first.origin.lat,
-        longitude: first.origin.lng,
-        latitudeDelta: 20,
-        longitudeDelta: 20,
-      };
-    }
-    return {
-      latitude: 39.5,
-      longitude: -98.35,
-      latitudeDelta: 50,
-      longitudeDelta: 50,
-    };
-  }, [pinned]);
+  const initialRegion: Region = {
+    latitude: 20,
+    longitude: 0,
+    latitudeDelta: 100,
+    longitudeDelta: 100,
+  };
+
+  // Auto-fit map to all pinned locations
+  useEffect(() => {
+    if (pinned.length === 0) return;
+
+    const coords = pinned.map((r) => ({
+      latitude: r.origin!.lat as number,
+      longitude: r.origin!.lng as number,
+    }));
+
+    mapRef.current?.fitToCoordinates(coords, {
+      edgePadding: { top: 80, right: 80, bottom: 80, left: 80 },
+      animated: true,
+    });
+  }, [pinned.length]);
 
   if (loading) {
     return (
@@ -124,7 +122,7 @@ export default function MapScreen() {
 
   return (
     <View style={styles.container}>
-      <MapView style={styles.map} initialRegion={initialRegion}>
+      <MapView ref={mapRef} style={styles.map} initialRegion={initialRegion}>
         {pinned.map((r) => {
           const label = r.origin?.name ?? "Unknown";
           const cc = r.origin?.countryCode ? `, ${r.origin.countryCode}` : "";
@@ -137,22 +135,25 @@ export default function MapScreen() {
                 longitude: r.origin!.lng as number,
               }}
             >
-              <Callout>
+              <Callout
+                onPress={() => {
+                  router.push(`/recipe/${r.id}`);
+                }}
+              >
                 <View style={{ maxWidth: 220 }}>
-                  <Text style={{ fontWeight: "700" }}>{r.title ?? "Recipe"}</Text>
+                  <Text style={{ fontWeight: "700" }}>
+                    {r.title ?? "Recipe"}
+                  </Text>
                   <Text>{label + cc}</Text>
+                  <Text style={{ marginTop: 6, opacity: 0.6 }}>
+                    Tap to open
+                  </Text>
                 </View>
               </Callout>
             </Marker>
           );
         })}
       </MapView>
-
-      <View style={styles.footer}>
-        <Text style={styles.footerText}>
-          Pinned: {pinned.length} • Missing: {missing.length} • Total: {recipes.length}
-        </Text>
-      </View>
     </View>
   );
 }
@@ -161,16 +162,4 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   map: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
-  footer: {
-    position: "absolute",
-    bottom: 14,
-    left: 14,
-    right: 14,
-    backgroundColor: "white",
-    padding: 10,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#eee",
-  },
-  footerText: { textAlign: "center" },
 });
