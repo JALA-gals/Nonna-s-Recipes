@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -8,11 +8,41 @@ import {
   ScrollView,
   TouchableOpacity,
 } from "react-native";
+import {subscribeToRecipes} from "../../src/services/recipes";
+import {useWindowDimensions, Alert } from "react-native";
+import { FamilyStoryCard, type FamilyStory } from "../../components/family-stories";
+import type { RecipeDoc } from "../../src/services/recipes";
+import RecipeDetail from "@/components/RecipeDetailRN";
 import { LinearGradient } from "expo-linear-gradient";
 import RecipeCard from "./components/RecipeCard";
 import RegionButton from "./components/RegionButton";
 
 export default function App() {
+  const [stories, setStories] = useState<FamilyStory[]>([]);
+    const [showDetail, setShowDetail] = useState(false);
+    const { width } = useWindowDimensions();
+    const padding = 16;
+    const gap = 16;
+    const numColumns = 2;
+    const cardWidth = (width - padding * 2 - gap * (numColumns - 1)) / numColumns;
+    const [selectedRecipe, setSelectedRecipe] = useState<FamilyStory | null>(null);  useEffect(() => {
+      const unsub = subscribeToRecipes((rows) => {
+        const mapped: FamilyStory[] = rows.map((recipe: RecipeDoc & { id: string }) => ({
+          id: recipe.id,
+          title: recipe.title,
+          recipeName: recipe.title,
+          familyName: recipe.storyteller || "Unknown Family",
+          locationText: `${recipe.origin.name}, ${recipe.origin.countryCode}`,
+          imageUrl: recipe.photoUrl || "https://placehold.co/600x400",
+          likeCount: 0,
+          generations: 1,
+        }));
+    
+        setStories(mapped);
+      });
+    
+      return () => unsub();
+    }, []);
   const recipes = [
     {
       title: "Abuela's Street Tacos",
@@ -73,7 +103,7 @@ export default function App() {
         <Text style={styles.sectionTitle}>Family Stories</Text>
 
         <FlatList
-          data={recipes}
+          data={stories}
           keyExtractor={(_, index) => index.toString()}
           numColumns={2}
           scrollEnabled={false}
@@ -81,16 +111,29 @@ export default function App() {
           renderItem={({ item, index }) => (
             <View
               style={{
+                width: cardWidth,
                 transform: [
-                  { rotate: index % 2 === 0 ? "-1deg" : "1deg" },
-                ],
+                  { rotate: index % 2 === 0 ? "-1deg" : "1deg" }],
+                  marginBottom:16,
               }}
             >
-              <RecipeCard {...item} />
+              <FamilyStoryCard
+                            story={item}
+                            onPress={(id) => {
+                              setSelectedRecipe(stories.find(s => s.id === id) || null);
+                              setShowDetail(true);
+                            }}
+                          />
             </View>
           )}
         />
-
+        {selectedRecipe && (
+                <RecipeDetail
+                  visible={showDetail}                  
+                  onClose={() => setShowDetail(false)}
+                  recipe={selectedRecipe}
+                />
+              )}
         {/* CTA */}
         <View style={styles.cta}>
           <Text style={styles.ctaTitle}>Share Your Story</Text>
