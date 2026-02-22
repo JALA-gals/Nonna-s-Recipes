@@ -249,15 +249,7 @@ const instructionsToSteps = (raw: any): InstructionStep[] | undefined => {
           recipe={selectedRecipe}
         />
 
-        {/* CTA */}
-        <View style={styles.cta}>
-          <Text style={styles.ctaTitle}>Share Your Story</Text>
-          <Text style={styles.ctaSubtitle}>Every recipe has a history. Add yours!</Text>
-
-          <TouchableOpacity style={styles.ctaButton}>
-            <Text style={styles.ctaButtonText}>Add Your Recipe</Text>
-          </TouchableOpacity>
-        </View>
+        
       </ScrollView>
     </LinearGradient>
   );
