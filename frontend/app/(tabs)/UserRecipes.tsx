@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { SafeAreaView } from "react-native-safe-area-context";
 import {
   View,
   Text,
@@ -206,7 +207,9 @@ const name = d.recipeName ?? d.name ?? d.title ?? "Untitled";        const locat
   };
 
   return (
+   
     <LinearGradient colors={["#a1c5a8", "#fbf2cc"]} style={{ flex: 1 }}>
+       <SafeAreaView style={{ flex: 1 }}>
   <FlatList
     data={filteredRecipes}
     keyExtractor={(item) => item.id}
@@ -277,7 +280,9 @@ const name = d.recipeName ?? d.name ?? d.title ?? "Untitled";        const locat
       ) : null
     }
   />
+  </SafeAreaView>
 </LinearGradient>
+
   );
 }
 

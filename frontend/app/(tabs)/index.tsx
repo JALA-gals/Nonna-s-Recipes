@@ -16,7 +16,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { db, auth } from "@/src/lib/firebase";
 import SettingsModal from "@/components/settings-modal";
 import { LinearGradient } from "expo-linear-gradient";
-
+import { SafeAreaView } from "react-native-safe-area-context";
 const { width } = Dimensions.get("window");
 
 type Recipe = {
@@ -84,6 +84,7 @@ const [profilePhotoUrl, setProfilePhotoUrl] = useState<string | null>(null);
   };
 
   return (
+
     <LinearGradient colors={["#a1c5a8", "#fbf2cc"]} style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
 
