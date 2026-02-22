@@ -11,7 +11,9 @@ import {
 import { Search, BookOpen } from "lucide-react-native";
 import UserRecipeCard from "./components/UserRecipeCard";
 import { LinearGradient } from "expo-linear-gradient";
-
+import { useEffect } from "react";
+import { collection, onSnapshot, query, where, orderBy } from "firebase/firestore";
+import { auth, db } from "../../src/lib/firebase"; // adjust path
 type Recipe = {
   id: string;
   name: string;
@@ -31,6 +33,31 @@ type Recipe = {
   region: string;
   regionEmoji: string;
 };
+function fallbackLocation(d: any) {
+  const loc = d.originLocation ?? d.location ?? d.origin;
+
+  // if it's already a string, use it
+  if (typeof loc === "string") return loc;
+
+  // if it's an object like { name, lat, lng, countryCode }
+  if (loc && typeof loc === "object") {
+    if (typeof loc.name === "string" && loc.name.trim().length > 0) return loc.name;
+  }
+
+  return "Location, Country";
+}
+
+function fallbackStory(d: any) {
+  // Use Firestore story if it exists
+  if (typeof d.familyStory === "string" && d.familyStory.trim().length > 0) return d.familyStory;
+
+  // Otherwise generate a “fake-data-style” story from what we know
+  const name = d.recipeName ?? "this recipe";
+  const person = d.originalRecipeFrom ?? d.family ?? "my family";
+  const location = fallbackLocation(d);
+
+  return `This dish has been passed down in our family for generations. Every time we make ${name}, it brings us back to ${location} and the people who taught us to cook it — especially ${person}.`;
+}
 
 const recipesData: Recipe[] = [
   {
@@ -87,10 +114,72 @@ const filterColors: Record<string, string> = {
 };
 
 export default function UserRecipesScreen() {
-  const [recipes, setRecipes] = useState(recipesData);
-  const [activeFilter, setActiveFilter] = useState("All");
+const [recipes, setRecipes] = useState<Recipe[]>([]);
+const [loading, setLoading] = useState(true);
+const [activeFilter, setActiveFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+  useEffect(() => {
+  const uid = auth.currentUser?.uid;
+  if (!uid) {
+    setRecipes([]);
+    setLoading(false);
+    return;
+  }
 
+  // If your recipes are stored under /recipes and have ownerId
+  const q = query(
+  collection(db, "recipes"),
+  where("createdBy", "==", uid)
+);
+
+  const unsub = onSnapshot(
+    q,
+    (snap) => {
+      const data: Recipe[] = snap.docs.map((docSnap) => {
+        const d: any = docSnap.data();
+
+        // Map Firestore fields -> your UI Recipe shape
+const name = d.recipeName ?? d.name ?? d.title ?? "Untitled";        const location = fallbackLocation(d);
+        const family = d.originalRecipeFrom ?? d.family ?? "";
+        const date = d.estimatedCreationDate ?? "";
+        const story = fallbackStory(d);
+        const image = d.imageUrl ?? "";
+
+        // region: if you store it, use it; otherwise default
+        const region = d.region ?? "All";
+
+        return {
+          id: docSnap.id,
+          name,
+          image,
+          origin: d.originalRecipeFrom ?? "",
+          location,
+          family,
+          date,
+          story,
+          ingredients: Array.isArray(d.ingredients) ? d.ingredients.length : 0,
+          cookTime: d.cookTime ?? "",
+          generations: d.generations ?? 0,
+          likes: d.likes ?? 0,
+          liked: false, // you can wire this later per user
+          overlayColor: "rgba(255,214,168,0.3)",
+          tagColor: "rgba(255,161,173,0.7)",
+          region,
+          regionEmoji: "🍽️",
+        };
+      });
+
+      setRecipes(data);
+      setLoading(false);
+    },
+    (err) => {
+      console.log("Firestore error:", err);
+      setLoading(false);
+    }
+  );
+
+  return () => unsub();
+}, []);
   const filteredRecipes = recipes.filter((r) => {
     const matchesFilter = activeFilter === "All" || r.region === activeFilter;
     const matchesSearch =
@@ -118,14 +207,17 @@ export default function UserRecipesScreen() {
 
   return (
     <LinearGradient colors={["#a1c5a8", "#fbf2cc"]} style={{ flex: 1 }}>
-      <ScrollView contentContainerStyle={styles.container}>
-        {/* Header */}
+  <FlatList
+    data={filteredRecipes}
+    keyExtractor={(item) => item.id}
+    contentContainerStyle={{ paddingBottom: 50 }}
+    ListHeaderComponent={
+      <View>
         <View style={styles.header}>
           <Text style={styles.title}>Your Recipes</Text>
           <Text style={styles.subTitle}>{filteredRecipes.length} family treasures</Text>
         </View>
 
-        {/* Search Bar */}
         <View style={styles.searchContainer}>
           <Search size={18} color="#828282" />
           <TextInput
@@ -137,7 +229,6 @@ export default function UserRecipesScreen() {
           />
         </View>
 
-        {/* Filter Tags */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -155,44 +246,38 @@ export default function UserRecipesScreen() {
                 },
               ]}
             >
-              <Text style={styles.filterText}>
-                {filter === "Asia" && "🍜 "}
-                {filter === "Europe" && "🥐 "}
-                {filter === "Americas" && "🌮 "}
-                {filter === "Africa" && "🍲 "}
-                {filter === "Middle East" && "🧆 "}
-                {filter}
-              </Text>
+              <Text style={styles.filterText}>{filter}</Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
 
-        {/* Recipe Cards */}
-        <FlatList
-          data={filteredRecipes}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 50 }}
-          renderItem={({ item }) => (
-            <UserRecipeCard
-              recipe={item}
-              onToggleLike={() => toggleLike(item.id)}
-              onEdit={() => handleEdit(item.id)}
-            />
-          )}
-        />
-
-        {/* Empty State */}
-        {filteredRecipes.length === 0 && (
-          <View style={styles.emptyState}>
-            <View style={styles.emptyIcon}>
-              <BookOpen size={28} color="#7b3306" />
-            </View>
-            <Text style={styles.emptyTitle}>No recipes found</Text>
-            <Text style={styles.emptySubTitle}>Try a different search or filter</Text>
-          </View>
+        {loading && (
+          <Text style={{ paddingHorizontal: 16, color: "#7b3306" }}>Loading...</Text>
         )}
-      </ScrollView>
-    </LinearGradient>
+      </View>
+    }
+    renderItem={({ item }) => (
+      <View style={{ paddingHorizontal: 16 }}>
+        <UserRecipeCard
+          recipe={item}
+          onToggleLike={() => toggleLike(item.id)}
+          onEdit={() => handleEdit(item.id)}
+        />
+      </View>
+    )}
+    ListEmptyComponent={
+      !loading ? (
+        <View style={styles.emptyState}>
+          <View style={styles.emptyIcon}>
+            <BookOpen size={28} color="#7b3306" />
+          </View>
+          <Text style={styles.emptyTitle}>No recipes found</Text>
+          <Text style={styles.emptySubTitle}>Try a different search or filter</Text>
+        </View>
+      ) : null
+    }
+  />
+</LinearGradient>
   );
 }
 
