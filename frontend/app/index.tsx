@@ -157,19 +157,6 @@ export default function LoginScreen() {
               </TouchableOpacity>
             </View>
           </View>
-
-          {/* Google Sign In Button */}
-          <TouchableOpacity
-            style={styles.googleButton}
-            onPress={handleGoogleLogin}
-            activeOpacity={0.8}
-          >
-            <Image
-              source={require('../assets/images/google-icon.png')} // UPDATE THIS PATH
-              style={styles.googleIcon}
-            />
-            <Text style={styles.googleButtonText}>Sign in with Google</Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -299,30 +286,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#f77777',
     textDecorationLine: 'underline',
-  },
-  googleButton: {
-    width: '100%',
-    maxWidth: 346,
-    backgroundColor: 'rgba(255,255,255,0.7)',
-    borderRadius: 15,
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  googleIcon: {
-    width: 40,
-    height: 40,
-    marginRight: 12,
-  },
-  googleButtonText: {
-    fontSize: 16,
-    color: '#7b3306',
   },
 });
