@@ -8,9 +8,9 @@ import {
   playRecording, pauseRecording, resumeRecording,
   getSavedRecordings, deleteRecording,
   type Recording
-} from '../../services/audio';
-import { transcribeAudio } from '../../services/whisper';
-import { structureRecipe } from '../../services/gemini';
+} from '../../src/services/audio';
+import { transcribeAudio } from '../../src/services/whisper';
+import { structureRecipe } from '../../src/services/gemini';
 import * as DocumentPicker from 'expo-document-picker';
 import * as FileSystem from 'expo-file-system';
 
